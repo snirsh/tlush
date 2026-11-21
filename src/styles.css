@@ -154,9 +154,9 @@ body {
   border-bottom-color: var(--ink);
 }
 .tabs button:focus-visible {
-  outline: none;
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
   color: var(--ink);
-  box-shadow: 0 2px 0 var(--ink);
   border-radius: 1px;
 }
 
