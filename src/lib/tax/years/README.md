@@ -11,9 +11,15 @@ year. The engine reads tax figures only from these specs.
 3. Add the year's expected figures to `../__tests__/yearSpecs.test.ts`. Write the
    published values by hand. Do not read them back from the spec.
 
-The monthly rate checker (`scripts/rate-check/`) opens a PR with steps 1 and 2
-done once both the ITA booklet and the BTL page publish the year. Step 3 stays
-manual on purpose.
+The monthly rate checker (`scripts/rate-check/`) opens a PR against the
+repository's default branch with steps 1 and 2 done once both the ITA booklet
+and the BTL page publish the year. It runs only from the default branch. Step 3
+stays manual on purpose.
+
+A pull request that touches this directory or the checker also runs the checker
+in strict dry-run mode against the live pages. It fails unless every field of
+the current calendar year matches the official figures. Expect that failure in
+January until the new year's spec lands.
 
 The UI year selector picks up the new year from `SUPPORTED_YEARS` on its own.
 `yearConstants()` throws a `RangeError` for any year not registered here.
