@@ -24,7 +24,9 @@ Key product rules:
 
 ```
 src/lib/tax/        Pure tax engine (no React). The heart of the project.
-  constants.ts      Brackets, Bituah Leumi rates, ceilings, surtax — per year.
+  years/            One spec file per tax year (brackets, Bituah Leumi, surtax,
+                    Section 102 rate), each value with its source. See years/README.md.
+  constants.ts      Year registry lookup (yearConstants), default fees.
   income.ts         Progressive + marginal income tax.
   bituah.ts         National Insurance + health (spread over 12 months).
   surtax.ts         "Mas yesef" (3% / 5%) and Magen Mas.
@@ -42,8 +44,8 @@ public/tickers.json Offline symbol-autocomplete fallback list.
 
 - **Keep the engine pure and framework-free.** All money inside the engine is in
   ILS unless a name ends in `Usd`. Conversion happens at the UI edge.
-- **`constants.ts` is the single source of truth** for tax figures. To support a
-  new tax year, add an entry and (if appropriate) bump `DEFAULT_YEAR`.
+- **`src/lib/tax/years/` is the single source of truth** for tax figures. To
+  support a new tax year, add `years/<year>.ts` and one line in `years/index.ts`.
 - Network code must **never throw to the UI** — return `null` and let the manual
   override take over.
 - Validate any engine change against `src/lib/tax/__tests__/examples.test.ts`.

@@ -14,7 +14,7 @@ export function bituahOnMonthlySlice(
 ): number {
   if (extraMonthlyIncome <= 0) return 0;
   const { reducedThresholdMonthly, reducedRate, fullRate, ceilingMonthly } =
-    yc.bituah;
+    yc.nationalInsurance;
 
   const base = Math.max(0, monthlySalary);
   const top = Math.min(base + extraMonthlyIncome, ceilingMonthly);
