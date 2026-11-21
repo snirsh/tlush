@@ -56,8 +56,9 @@ export function renderText(report: Report, changes: FileChange[]): string {
 function describeOutcome(y: YearOutcome): string {
   switch (y.kind) {
     case "existing": {
-      const diffs = y.checks.filter((c) => c.status === "diff").length;
-      return diffs ? `${diffs} field(s) differ from the spec` : "spec matches every checked field";
+      const count = (s: string) => y.checks.filter((c) => c.status === s).length;
+      const unchecked = count("unchecked") ? `, ${count("unchecked")} unchecked` : "";
+      return `${count("match")} match, ${count("diff")} differ${unchecked}`;
     }
     case "new":
       return `new year published, spec file would be created (carried over from ${y.carriedFrom})`;
