@@ -131,7 +131,9 @@ describe("form labels", () => {
   it("names every control on both calculators, with fees and FX override open", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await user.click(screen.getByRole("checkbox", { name: "Set exchange rate" }));
+    const fxOverride = screen.getByRole("checkbox", { name: "USD/ILS exchange rate" });
+    await user.click(screen.getByText("USD/ILS exchange rate"));
+    expect(fxOverride).toBeChecked();
     expect(screen.getByRole("spinbutton", { name: "USD/ILS exchange rate" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /Customize sale fees/ }));

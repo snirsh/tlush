@@ -77,11 +77,10 @@ export function GlobalInputs({
         <Field
           label="USD/ILS exchange rate"
           help="Off: the live market rate is used. On: enter your own value (1.0000–7.0000)."
+          labelTarget="toggle"
         >
           <div className="inline">
             <Toggle
-              label="Set exchange rate"
-              hideLabel
               checked={settings.fxOverride !== null}
               onChange={(on) => set("fxOverride", on ? Number(fxLive.toFixed(4)) : null)}
             />
