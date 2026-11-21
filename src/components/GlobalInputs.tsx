@@ -1,5 +1,5 @@
 import { SUPPORTED_YEARS } from "../lib/tax";
-import { Field, NumberInput, Toggle } from "./ui";
+import { Field, NumberInput, Select, Toggle } from "./ui";
 import { num } from "../lib/format";
 
 export interface Settings {
@@ -52,7 +52,7 @@ export function GlobalInputs({
         </Field>
 
         <Field label="Tax year" help="Which year's brackets, Bituah Leumi rates and ceilings apply.">
-          <select
+          <Select
             value={settings.year}
             onChange={(e) => set("year", Number(e.target.value))}
           >
@@ -61,7 +61,7 @@ export function GlobalInputs({
                 {y}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
       </div>
 

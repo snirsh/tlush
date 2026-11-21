@@ -17,7 +17,7 @@ import {
   resolveFees,
   type FeeOverrides,
 } from "./FeeEditor";
-import { AnimatedValue, EmptyResults, Field, NumberInput, ResultRow, Toggle } from "./ui";
+import { AnimatedValue, DateInput, EmptyResults, Field, NumberInput, ResultRow, Toggle } from "./ui";
 import { BreakdownBar } from "./Breakdown";
 
 interface Grant {
@@ -291,7 +291,7 @@ function GrantCard({
           <NumberInput value={grant.shares} onChange={(v) => onChange({ shares: v })} min={1} step={1} />
         </Field>
         <Field label="Grant date" help="The date your shares were granted (not the vesting date).">
-          <input type="date" value={grant.grantDate} max={todayIso()} onChange={(e) => onChange({ grantDate: e.target.value })} />
+          <DateInput value={grant.grantDate} max={todayIso()} onChange={(e) => onChange({ grantDate: e.target.value })} />
         </Field>
       </div>
 
