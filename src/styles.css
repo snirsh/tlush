@@ -13,7 +13,10 @@
   --surface-3: #23272c;   /* hover / pressed */
   --ink: #f3f4f6;         /* primary text & the bright accent */
   --ink-2: #9a9fa7;       /* secondary text, labels */
-  --ink-3: #6a6f77;       /* hints, placeholders, faint marks */
+  /* hints, placeholders, faint text. Smallest lightness step that clears WCAG AA
+     4.5:1 on every surface: 5.27 on --bg, 4.86 on --surface, 4.52 on --surface-2. */
+  --ink-3: #81868e;
+  --ink-3-mark: #6a6f77;  /* non-text marks only (underlines); exempt from 4.5:1 */
   --line: #212429;        /* hairlines */
   --line-2: #2c3036;      /* stronger hairlines */
   --ring: rgba(243, 244, 246, 0.16);
@@ -333,7 +336,7 @@ input:focus, select:focus {
   text-decoration-color: var(--line-2);
   transition: color 0.14s ease;
 }
-.link:hover { color: var(--ink); text-decoration-color: var(--ink-3); }
+.link:hover { color: var(--ink); text-decoration-color: var(--ink-3-mark); }
 .fee-editor { margin: 12px 0 4px; }
 
 /* ============================ Results (statement) ========================== */
