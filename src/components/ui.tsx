@@ -244,10 +244,10 @@ export function ResultRow({
               aria-describedby={help ? tipId : undefined}
             >
               <span className="caret" aria-hidden="true">{open ? "▾" : "▸"}</span>
-              {label}
+              <span className="result-name">{label}</span>
             </button>
           ) : (
-            label
+            <span className="result-name">{label}</span>
           )}
           {help ? <Info id={tipId} text={help} /> : null}
         </span>

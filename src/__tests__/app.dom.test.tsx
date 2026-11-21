@@ -213,6 +213,27 @@ describe("result rows", () => {
     return user;
   }
 
+  it("gives each row label its own element, free of tooltip text", async () => {
+    const user = await rsuWithPrice();
+    const exactly = (text: string) =>
+      [...document.body.querySelectorAll("*")].filter(
+        (el) => el.textContent!.replace(/\s+/g, " ").trim() === text,
+      );
+    for (const label of ["Average tax deduction", "Marginal tax", "Total net", "Monthly miluim pay (gross)"]) {
+      expect(exactly(label), label).toHaveLength(1);
+    }
+
+    await user.click(screen.getByRole("tab", { name: "ESPP" }));
+    await user.click(screen.getByRole("checkbox", { name: /set stock price/i }));
+    await user.type(screen.getByLabelText("Stock price (USD)"), "80");
+    await screen.findByText("Gross investment");
+    for (const label of ["Gross investment", "Capital tax"]) {
+      expect(exactly(label), label).toHaveLength(1);
+    }
+    await user.click(screen.getByRole("checkbox", { name: /With Trustee/i }));
+    expect(exactly("Tax on discount (paid)")).toHaveLength(1);
+  });
+
   it("does not expose plain rows as buttons", async () => {
     await rsuWithPrice();
     expect(screen.queryByRole("button", { name: /Total net/ })).toBeNull();
