@@ -58,6 +58,30 @@ describe("RSU calculator UI", () => {
   });
 });
 
+describe("form labels", () => {
+  function expectEveryControlNamed() {
+    const controls = document.querySelectorAll("input, select");
+    expect(controls.length).toBeGreaterThan(10);
+    controls.forEach((el) => expect(el).toHaveAccessibleName());
+  }
+
+  it("names every control on both calculators, with fees and FX override open", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole("checkbox", { name: "Set exchange rate" }));
+    expect(screen.getByRole("spinbutton", { name: "USD/ILS exchange rate" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Customize sale fees/ }));
+    await user.click(screen.getByRole("checkbox", { name: "Set stock price" }));
+    expectEveryControlNamed();
+
+    await user.click(screen.getByRole("tab", { name: "ESPP" }));
+    await user.click(screen.getByRole("button", { name: /Customize sale fees/ }));
+    await user.click(screen.getByRole("checkbox", { name: "Set stock price" }));
+    expectEveryControlNamed();
+  });
+});
+
 describe("help tooltips", () => {
   const salaryHelp = /Gross monthly average/;
 

@@ -116,11 +116,14 @@ export function DateInput(props: Omit<InputHTMLAttributes<HTMLInputElement>, "ty
 /** A labelled checkbox toggle. */
 export function Toggle({
   label,
+  hideLabel,
   help,
   checked,
   onChange,
 }: {
   label: string;
+  /** Keep the label for assistive tech only, when the context already shows it. */
+  hideLabel?: boolean;
   help?: string;
   checked: boolean;
   onChange: (v: boolean) => void;
@@ -138,7 +141,9 @@ export function Toggle({
         onChange={(e) => onChange(e.target.checked)}
       />
       <span className="toggle-label">
-        <label htmlFor={id}>{label}</label>
+        <label htmlFor={id}>
+          {hideLabel ? <span className="visually-hidden">{label}</span> : label}
+        </label>
         {help ? <Info id={tipId} text={help} /> : null}
       </span>
     </div>
