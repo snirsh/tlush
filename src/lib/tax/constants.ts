@@ -6,15 +6,19 @@ export const YEARS: Record<number, YearConstants> = Object.fromEntries(
   TAX_YEAR_SPECS.map((spec) => [spec.year, spec]),
 );
 
-export const DEFAULT_YEAR = 2025;
-
-export function yearConstants(year: number): YearConstants {
-  return YEARS[year] ?? YEARS[DEFAULT_YEAR];
-}
-
 export const SUPPORTED_YEARS = Object.keys(YEARS)
   .map(Number)
   .sort((a, b) => a - b);
+
+export function yearConstants(year: number): YearConstants {
+  const spec = YEARS[year];
+  if (!spec) {
+    throw new RangeError(
+      `Unsupported tax year ${year}. Supported years: ${SUPPORTED_YEARS.join(", ")}.`,
+    );
+  }
+  return spec;
+}
 
 // ---------------------------------------------------------------------------
 // Default broker / trustee sale fees. Users can override each of these per
