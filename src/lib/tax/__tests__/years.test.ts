@@ -1,6 +1,26 @@
 import { describe, expect, it } from "vitest";
 import { yearConstants } from "../constants";
 import { annualIncomeTax } from "../income";
+import { bituahOnMonthlySlice } from "../bituah";
+
+describe("Bituah Leumi + health employee rates", () => {
+  it("2024 is 3.5% reduced (0.4% + 3.1%) and 12% full (7% + 5%)", () => {
+    const ni = yearConstants(2024).nationalInsurance;
+    expect(ni.reducedRate).toBeCloseTo(0.004 + 0.031, 10);
+    expect(ni.fullRate).toBeCloseTo(0.07 + 0.05, 10);
+  });
+
+  it.each([2025, 2026])("%i is 4.27% reduced (1.04% + 3.23%) and 12.17% full (7% + 5.17%)", (year) => {
+    const ni = yearConstants(year).nationalInsurance;
+    expect(ni.reducedRate).toBeCloseTo(0.0104 + 0.0323, 10);
+    expect(ni.fullRate).toBeCloseTo(0.07 + 0.0517, 10);
+  });
+
+  it("charges ₪608.50 on a 2025 ₪5,000 slice above a ₪20,000 salary", () => {
+    // Whole slice is in the full band: 5,000 × 12.17% = 608.50.
+    expect(bituahOnMonthlySlice(20_000, 5_000, yearConstants(2025))).toBeCloseTo(608.5, 2);
+  });
+});
 
 describe("2026 income-tax brackets (Amendment 288, §121)", () => {
   it("widens the 20% and 31% brackets to 228,000 and 301,200", () => {
