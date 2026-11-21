@@ -4,6 +4,7 @@ import { RsuCalculator, newGrant, type Grant } from "./components/RsuCalculator"
 import { EsppCalculator, newEspp, type EsppState } from "./components/EsppCalculator";
 import { Explanation } from "./components/Explanation";
 import { FALLBACK_USD_ILS, fetchUsdIls } from "./lib/market/fx";
+import { onFirstInteraction } from "./lib/firstInteraction";
 
 const TABS = [
   { id: "rsu", label: "RSU" },
@@ -44,12 +45,16 @@ export function App() {
   const [grants, setGrants] = useState<Grant[]>([newGrant()]);
   const [espp, setEspp] = useState<EsppState>(newEspp());
 
-  useEffect(() => {
-    fetchUsdIls().then(({ rate, live }) => {
-      setFxLive(rate);
-      setFxIsLive(live);
-    });
-  }, []);
+  useEffect(
+    () =>
+      onFirstInteraction(() =>
+        fetchUsdIls().then(({ rate, live }) => {
+          setFxLive(rate);
+          setFxIsLive(live);
+        }),
+      ),
+    [],
+  );
 
   const fx =
     settings.fxOverride !== null && settings.fxOverride !== ""
