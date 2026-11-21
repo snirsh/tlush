@@ -19,6 +19,8 @@ The UI year selector picks up the new year from `SUPPORTED_YEARS` on its own.
 - Every value carries a comment citing its primary source: ITA, BTL, or the
   law as published in Reshumot. Kolzchut is a secondary cross-check only.
 - Never copy figures from a third-party calculator's output.
+- `creditPoint.monthlyValue` comes from the booklet section "סכומים מתואמים"
+  ("נקודת זיכוי ... לחודש"). The engine does not read it yet.
 - The top §121 bracket is 47% with no upper bound. The 3% above the surtax
   threshold is §121B surtax and lives only in `surtax`, never as a bracket.
 

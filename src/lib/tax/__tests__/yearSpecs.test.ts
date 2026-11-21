@@ -30,18 +30,21 @@ const EXPECTED = {
     nationalInsurance: { reducedThresholdMonthly: 7_522, reducedRate: 0.035, fullRate: 0.12, ceilingMonthly: 49_030 },
     surtax: { thresholdAnnual: 721_560, rate: 0.03, capitalExtraRate: 0 },
     section102CapitalRate: 0.25,
+    creditPointMonthly: 242,
   },
   2025: {
     brackets: FROZEN_BRACKETS,
     nationalInsurance: { reducedThresholdMonthly: 7_522, reducedRate: 0.0427, fullRate: 0.1217, ceilingMonthly: 50_695 },
     surtax: { thresholdAnnual: 721_560, rate: 0.03, capitalExtraRate: 0.02 },
     section102CapitalRate: 0.25,
+    creditPointMonthly: 242,
   },
   2026: {
     brackets: BRACKETS_2026,
     nationalInsurance: { reducedThresholdMonthly: 7_703, reducedRate: 0.0427, fullRate: 0.1217, ceilingMonthly: 51_910 },
     surtax: { thresholdAnnual: 721_560, rate: 0.03, capitalExtraRate: 0.02 },
     section102CapitalRate: 0.25,
+    creditPointMonthly: 242,
   },
 } as const;
 
@@ -58,6 +61,7 @@ describe("year specs", () => {
     expect(spec.nationalInsurance).toEqual(expected.nationalInsurance);
     expect(spec.surtax).toEqual(expected.surtax);
     expect(spec.capitalGains.section102CapitalRate).toBe(expected.section102CapitalRate);
+    expect(spec.creditPoint).toEqual({ monthlyValue: expected.creditPointMonthly });
   });
 });
 

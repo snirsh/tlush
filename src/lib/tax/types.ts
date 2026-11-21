@@ -45,7 +45,7 @@ export interface IncomeTaxBracket {
  * That overstates by at most 0.01% of one month's income, under ₪1 per ₪100,000
  * of annual income.
  *
- * Reserved future siblings, not modelled yet: creditPoints, pension, hishtalmut.
+ * Reserved future siblings, not modelled yet: pension, hishtalmut.
  */
 export interface TaxYearSpec {
   year: number;
@@ -76,6 +76,11 @@ export interface TaxYearSpec {
   capitalGains: {
     /** Capital-gains rate on the capital portion under the Section 102 capital track. */
     section102CapitalRate: number;
+  };
+  /** Credit point (§33A). Recorded and source-checked, not yet used by the engine. */
+  creditPoint: {
+    /** Value of one credit point per month (ILS). The annual value is 12 times this. */
+    monthlyValue: number;
   };
 }
 
