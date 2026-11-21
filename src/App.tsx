@@ -1,26 +1,60 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type KeyboardEvent } from "react";
 import { DEFAULT_SETTINGS, GlobalInputs, type Settings } from "./components/GlobalInputs";
 import { RsuCalculator, newGrant, type Grant } from "./components/RsuCalculator";
 import { EsppCalculator, newEspp, type EsppState } from "./components/EsppCalculator";
 import { Explanation } from "./components/Explanation";
 import { FALLBACK_USD_ILS, fetchUsdIls } from "./lib/market/fx";
+import { onFirstInteraction } from "./lib/firstInteraction";
 
-type Tab = "rsu" | "espp" | "explanation";
+const TABS = [
+  { id: "rsu", label: "RSU" },
+  { id: "espp", label: "ESPP" },
+  { id: "explanation", label: "Explanation" },
+] as const;
+
+type Tab = (typeof TABS)[number]["id"];
+
+/** WAI-ARIA tabs keys: arrows wrap, Home/End jump; focus follows selection. */
+function tabIndexForKey(key: string, current: number): number | undefined {
+  const last = TABS.length - 1;
+  switch (key) {
+    case "ArrowRight":
+      return current === last ? 0 : current + 1;
+    case "ArrowLeft":
+      return current === 0 ? last : current - 1;
+    case "Home":
+      return 0;
+    case "End":
+      return last;
+  }
+}
 
 export function App() {
   const [tab, setTab] = useState<Tab>("rsu");
+
+  const onTabKeyDown = (e: KeyboardEvent<HTMLElement>) => {
+    const next = tabIndexForKey(e.key, TABS.findIndex((t) => t.id === tab));
+    if (next === undefined) return;
+    e.preventDefault();
+    setTab(TABS[next].id);
+    document.getElementById(`tab-${TABS[next].id}`)?.focus();
+  };
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [fxLive, setFxLive] = useState(FALLBACK_USD_ILS);
   const [fxIsLive, setFxIsLive] = useState(false);
   const [grants, setGrants] = useState<Grant[]>([newGrant()]);
   const [espp, setEspp] = useState<EsppState>(newEspp());
 
-  useEffect(() => {
-    fetchUsdIls().then(({ rate, live }) => {
-      setFxLive(rate);
-      setFxIsLive(live);
-    });
-  }, []);
+  useEffect(
+    () =>
+      onFirstInteraction(() =>
+        fetchUsdIls().then(({ rate, live }) => {
+          setFxLive(rate);
+          setFxIsLive(live);
+        }),
+      ),
+    [],
+  );
 
   const fx =
     settings.fxOverride !== null && settings.fxOverride !== ""
@@ -47,37 +81,47 @@ export function App() {
         </div>
       </header>
 
-      <nav className="tabs" role="tablist">
-        <button role="tab" aria-selected={tab === "rsu"} className={tab === "rsu" ? "active" : ""} onClick={() => setTab("rsu")}>
-          RSU
-        </button>
-        <button role="tab" aria-selected={tab === "espp"} className={tab === "espp" ? "active" : ""} onClick={() => setTab("espp")}>
-          ESPP
-        </button>
-        <button role="tab" aria-selected={tab === "explanation"} className={tab === "explanation" ? "active" : ""} onClick={() => setTab("explanation")}>
-          Explanation
-        </button>
-      </nav>
+      <main>
+        <nav className="tabs" role="tablist" aria-label="Calculator" onKeyDown={onTabKeyDown}>
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              id={`tab-${t.id}`}
+              aria-controls={tab === t.id ? `panel-${t.id}` : undefined}
+              aria-selected={tab === t.id}
+              tabIndex={tab === t.id ? 0 : -1}
+              className={tab === t.id ? "active" : ""}
+              onClick={() => setTab(t.id)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </nav>
 
-      {tab === "rsu" ? (
-        <RsuCalculator
-          settings={settings}
-          fx={fx}
-          grants={grants}
-          setGrants={setGrants}
-          globalInputs={globalInputs}
-        />
-      ) : null}
-      {tab === "espp" ? (
-        <EsppCalculator
-          settings={settings}
-          fx={fx}
-          plan={espp}
-          setPlan={setEspp}
-          globalInputs={globalInputs}
-        />
-      ) : null}
-      {tab === "explanation" ? <Explanation /> : null}
+        <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} tabIndex={0}>
+          {tab === "rsu" ? (
+            <RsuCalculator
+              settings={settings}
+              fx={fx}
+              grants={grants}
+              setGrants={setGrants}
+              globalInputs={globalInputs}
+            />
+          ) : null}
+          {tab === "espp" ? (
+            <EsppCalculator
+              settings={settings}
+              fx={fx}
+              plan={espp}
+              setPlan={setEspp}
+              globalInputs={globalInputs}
+            />
+          ) : null}
+          {tab === "explanation" ? <Explanation /> : null}
+        </div>
+      </main>
 
       <footer className="footer">
         <p>

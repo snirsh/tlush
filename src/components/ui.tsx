@@ -1,61 +1,173 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type SelectHTMLAttributes,
+} from "react";
 import type { Tone } from "../lib/format";
 
-/** Inline help marker with an accessible tooltip. */
-export function Info({ text }: { text: string }) {
+/**
+ * Inline help marker. Hover and keyboard focus show the tip (CSS); a click or
+ * tap toggles it, and Escape, blur or an outside press closes it. `id` names
+ * the tooltip so the control it explains can point aria-describedby at it.
+ */
+export function Info({ id, text }: { id: string; text: string }) {
+  const [open, setOpen] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  const wrapRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setOpen(false);
+      setDismissed(true);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [open]);
+
   return (
-    <span className="info" tabIndex={0} aria-label={text} data-tip={text}>
-      ?
+    <span
+      ref={wrapRef}
+      className="info-wrap"
+      data-open={open || undefined}
+      data-dismissed={dismissed || undefined}
+      onPointerEnter={() => setDismissed(false)}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <button
+        type="button"
+        className="info"
+        aria-label="More info"
+        aria-describedby={id}
+        onFocus={() => setDismissed(false)}
+        onBlur={() => setOpen(false)}
+        onClick={() => {
+          setDismissed(open);
+          setOpen(!open);
+        }}
+      >
+        ?
+      </button>
+      <span role="tooltip" id={id} className="info-tip">
+        {text}
+      </span>
     </span>
   );
+}
+
+/** Ties the control inside a Field to its label and help text. */
+interface FieldInfo {
+  /** The id the visible label's htmlFor points at. */
+  id: string;
+  labelId: string;
+  describedBy?: string;
+  /** "toggle": the label clicks a Toggle in the field; other controls are labelledby. */
+  labelTarget?: "toggle";
+}
+
+const FieldContext = createContext<FieldInfo | null>(null);
+
+export function useFieldControl(): {
+  id?: string;
+  "aria-labelledby"?: string;
+  "aria-describedby"?: string;
+} {
+  const field = useContext(FieldContext);
+  if (!field) return {};
+  return field.labelTarget === "toggle"
+    ? { "aria-labelledby": field.labelId, "aria-describedby": field.describedBy }
+    : { id: field.id, "aria-describedby": field.describedBy };
 }
 
 /** A labelled form row with optional help text. */
 export function Field({
   label,
   help,
+  labelTarget,
   children,
 }: {
   label: string;
   help?: string;
+  labelTarget?: "toggle";
   children: ReactNode;
 }) {
+  const id = useId();
+  const labelId = useId();
+  const tipId = useId();
   return (
-    <label className="field">
+    <div className="field">
       <span className="field-label">
-        {label}
-        {help ? <Info text={help} /> : null}
+        <label id={labelId} htmlFor={id}>
+          {label}
+        </label>
+        {help ? <Info id={tipId} text={help} /> : null}
       </span>
-      {children}
-    </label>
+      <FieldContext.Provider
+        value={{ id, labelId, describedBy: help ? tipId : undefined, labelTarget }}
+      >
+        {children}
+      </FieldContext.Provider>
+    </div>
   );
 }
 
-/** A labelled checkbox toggle. */
+export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
+  const control = useFieldControl();
+  return <select {...control} {...props} />;
+}
+
+export function DateInput(props: Omit<InputHTMLAttributes<HTMLInputElement>, "type">) {
+  const control = useFieldControl();
+  return <input type="date" {...control} {...props} />;
+}
+
+/**
+ * A labelled checkbox toggle. Inside a `Field labelTarget="toggle"` it takes the
+ * field's label instead of its own, so `label` is omitted there.
+ */
 export function Toggle({
   label,
   help,
   checked,
   onChange,
 }: {
-  label: string;
+  label?: string;
   help?: string;
   checked: boolean;
   onChange: (v: boolean) => void;
 }) {
-  const id = useId();
+  const ownId = useId();
+  const tipId = useId();
+  const field = useContext(FieldContext);
+  const id = field?.labelTarget === "toggle" ? field.id : ownId;
   return (
     <div className="toggle">
       <input
         id={id}
         type="checkbox"
         checked={checked}
+        aria-describedby={help ? tipId : field?.describedBy}
         onChange={(e) => onChange(e.target.checked)}
       />
-      <label htmlFor={id}>
-        {label}
-        {help ? <Info text={help} /> : null}
-      </label>
+      <span className="toggle-label">
+        {label ? <label htmlFor={id}>{label}</label> : null}
+        {help ? <Info id={tipId} text={help} /> : null}
+      </span>
     </div>
   );
 }
@@ -76,8 +188,10 @@ export function NumberInput({
   step?: number;
   placeholder?: string;
 }) {
+  const control = useFieldControl();
   return (
     <input
+      {...control}
       type="number"
       inputMode="decimal"
       value={value}
@@ -112,23 +226,38 @@ export function ResultRow({
   children?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const detailId = useId();
+  const tipId = useId();
   const expandable = Boolean(children);
   return (
     <div className={`result-row${expandable ? " expandable" : ""}${emphasis ? " emph" : ""}`}>
-      <button
-        type="button"
-        className="result-head"
-        onClick={() => expandable && setOpen((o) => !o)}
-        aria-expanded={expandable ? open : undefined}
-      >
+      {/* The head owns the click so the whole row stays a mouse target; the
+          button inside is the keyboard and screen-reader control. */}
+      <div className="result-head" onClick={expandable ? () => setOpen((o) => !o) : undefined}>
         <span className="result-label">
-          {expandable ? <span className="caret">{open ? "▾" : "▸"}</span> : null}
-          {label}
-          {help ? <Info text={help} /> : null}
+          {expandable ? (
+            <button
+              type="button"
+              className="result-toggle"
+              aria-expanded={open}
+              aria-controls={open ? detailId : undefined}
+              aria-describedby={help ? tipId : undefined}
+            >
+              <span className="caret" aria-hidden="true">{open ? "▾" : "▸"}</span>
+              <span className="result-name">{label}</span>
+            </button>
+          ) : (
+            <span className="result-name">{label}</span>
+          )}
+          {help ? <Info id={tipId} text={help} /> : null}
         </span>
         <span className={`result-value${tone ? ` ${tone}` : ""}`}>{value}</span>
-      </button>
-      {expandable && open ? <div className="result-detail">{children}</div> : null}
+      </div>
+      {expandable && open ? (
+        <div className="result-detail" id={detailId}>
+          {children}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -215,5 +344,14 @@ export function AnimatedValue({
     };
   }, [value, duration, reduce]);
 
-  return <span className="num">{format(display)}</span>;
+  const shown = format(display);
+  const final = format(value);
+  if (shown === final) return <span className="num">{final}</span>;
+  // Mid-roll: screen readers get only the destination, never the ticking digits.
+  return (
+    <span className="num">
+      <span aria-hidden="true">{shown}</span>
+      <span className="visually-hidden">{final}</span>
+    </span>
+  );
 }

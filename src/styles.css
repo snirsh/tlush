@@ -13,10 +13,14 @@
   --surface-3: #23272c;   /* hover / pressed */
   --ink: #f3f4f6;         /* primary text & the bright accent */
   --ink-2: #9a9fa7;       /* secondary text, labels */
-  --ink-3: #6a6f77;       /* hints, placeholders, faint marks */
+  /* hints, placeholders, faint text. Smallest lightness step that clears WCAG AA
+     4.5:1 on every surface: 5.27 on --bg, 4.86 on --surface, 4.52 on --surface-2. */
+  --ink-3: #81868e;
+  --ink-3-mark: #6a6f77;  /* non-text marks only (underlines); exempt from 4.5:1 */
   --line: #212429;        /* hairlines */
   --line-2: #2c3036;      /* stronger hairlines */
   --ring: rgba(243, 244, 246, 0.16);
+  --focus: var(--ink-2);  /* keyboard focus outlines; >= 3:1 on every surface */
 
   /* Semantic sign colours — restrained so they read as meaning, not decoration */
   --gain: #5fb88a;        /* a gain, credit or refund (+) */
@@ -42,6 +46,18 @@
 }
 
 * { box-sizing: border-box; }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
 
 body {
   margin: 0;
@@ -139,9 +155,9 @@ body {
   border-bottom-color: var(--ink);
 }
 .tabs button:focus-visible {
-  outline: none;
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
   color: var(--ink);
-  box-shadow: 0 2px 0 var(--ink);
   border-radius: 1px;
 }
 
@@ -234,7 +250,7 @@ input:focus, select:focus {
 }
 .seg-switch button:hover { color: var(--ink-2); }
 .seg-switch button.active { background: var(--surface-3); color: var(--ink); }
-.seg-switch button:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+.seg-switch button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 
 /* Small derived-value hint beneath a field */
 .field-hint {
@@ -251,7 +267,7 @@ input:focus, select:focus {
   cursor: pointer;
   flex: none;
 }
-.toggle label {
+.toggle-label {
   cursor: pointer;
   font-size: 14px;
   color: var(--ink);
@@ -259,9 +275,14 @@ input:focus, select:focus {
   align-items: center;
   gap: 6px;
 }
+.toggle-label label { cursor: pointer; }
 
 /* Inline help marker */
+.info-wrap { position: relative; display: inline-flex; }
 .info {
+  appearance: none;
+  margin: 0;
+  padding: 0;
   display: inline-grid;
   place-items: center;
   width: 15px; height: 15px;
@@ -270,12 +291,13 @@ input:focus, select:focus {
   border: 1px solid var(--line-2);
   color: var(--ink-3);
   font: 500 9px var(--sans);
+  letter-spacing: inherit;
   cursor: help;
-  position: relative;
 }
-.info:hover, .info:focus-visible { border-color: var(--ink-2); color: var(--ink-2); outline: none; }
-.info:hover::after, .info:focus::after {
-  content: attr(data-tip);
+.info-wrap:hover > .info, .info:focus-visible { border-color: var(--ink-2); color: var(--ink-2); }
+.info:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.info-tip {
+  display: none;
   position: absolute;
   bottom: 160%;
   left: 50%;
@@ -290,7 +312,11 @@ input:focus, select:focus {
   letter-spacing: 0;
   z-index: 20;
   box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.8);
+  cursor: help;
 }
+.info-wrap:not([data-dismissed]):hover > .info-tip,
+.info-wrap:not([data-dismissed]) > .info:focus-visible + .info-tip,
+.info-wrap[data-open] > .info-tip { display: block; }
 
 .grant-head { display: flex; align-items: center; justify-content: space-between; }
 .grant-head h2 { margin-bottom: 0; }
@@ -333,7 +359,7 @@ input:focus, select:focus {
   text-decoration-color: var(--line-2);
   transition: color 0.14s ease;
 }
-.link:hover { color: var(--ink); text-decoration-color: var(--ink-3); }
+.link:hover { color: var(--ink); text-decoration-color: var(--ink-3-mark); }
 .fee-editor { margin: 12px 0 4px; }
 
 /* ============================ Results (statement) ========================== */
@@ -433,14 +459,38 @@ input:focus, select:focus {
   justify-content: space-between;
   gap: 16px;
   padding: 12px 0;
-  background: none;
-  border: 0;
   color: var(--ink);
+  /* These rows used to be <button>s; keep the UA control font they rendered in
+     (Arial on Linux Chromium, the system font on macOS). The keyword shorthand
+     is Chromium/WebKit-only; Firefox drops it and keeps the first line. */
+  font: 400 14px/normal system-ui, sans-serif;
+  font: -webkit-small-control;
   font-size: 14px;
+  font-weight: 400;
+  line-height: normal;
+  letter-spacing: normal;
+  text-rendering: auto;
   text-align: left;
   cursor: default;
 }
 .result-row.expandable .result-head { cursor: pointer; }
+.result-toggle {
+  appearance: none;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+.result-toggle:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 2px; }
+[role="tabpanel"]:focus-visible { outline: 2px solid var(--focus); outline-offset: 4px; border-radius: var(--r-sm); }
 .result-row.expandable:hover .result-label { color: var(--ink-2); }
 .result-label {
   display: inline-flex;
@@ -551,7 +601,7 @@ input:focus, select:focus {
 @media (max-width: 560px) {
   .app { padding: 36px 16px 64px; }
   .tabs { gap: 22px; }
-  .info:hover::after, .info:focus::after { width: 180px; }
+  .info-tip { width: 180px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

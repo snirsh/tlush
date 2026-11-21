@@ -4,7 +4,11 @@
 // every market value (FX rate, stock price, grant price) has a manual override
 // in the UI. Network calls therefore fail soft and never throw to the UI.
 
-/** Public CORS proxies, tried in order, used to reach APIs that lack CORS. */
+/**
+ * Public CORS proxies, tried in order, used to reach APIs that lack CORS.
+ * Privacy follow-up: ticker search goes through public CORS proxies, so the
+ * typed symbol (and any FX URL whose direct fetch failed) reaches a third party.
+ */
 const CORS_PROXIES = [
   (url: string) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
   (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
