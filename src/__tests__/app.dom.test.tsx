@@ -20,6 +20,17 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+describe("landmarks", () => {
+  it("puts the calculator in main between the banner and the footer", () => {
+    render(<App />);
+    const main = screen.getByRole("main");
+    expect(screen.getByRole("banner")).toBeInTheDocument();
+    expect(screen.getByRole("contentinfo")).toBeInTheDocument();
+    expect(main).toContainElement(screen.getByRole("tablist"));
+    expect(main).toContainElement(screen.getByRole("heading", { name: "General inputs" }));
+  });
+});
+
 describe("RSU calculator UI", () => {
   it("renders after-tax results from manual inputs", async () => {
     const user = userEvent.setup();

@@ -47,37 +47,39 @@ export function App() {
         </div>
       </header>
 
-      <nav className="tabs" role="tablist">
-        <button role="tab" aria-selected={tab === "rsu"} className={tab === "rsu" ? "active" : ""} onClick={() => setTab("rsu")}>
-          RSU
-        </button>
-        <button role="tab" aria-selected={tab === "espp"} className={tab === "espp" ? "active" : ""} onClick={() => setTab("espp")}>
-          ESPP
-        </button>
-        <button role="tab" aria-selected={tab === "explanation"} className={tab === "explanation" ? "active" : ""} onClick={() => setTab("explanation")}>
-          Explanation
-        </button>
-      </nav>
+      <main>
+        <nav className="tabs" role="tablist">
+          <button role="tab" aria-selected={tab === "rsu"} className={tab === "rsu" ? "active" : ""} onClick={() => setTab("rsu")}>
+            RSU
+          </button>
+          <button role="tab" aria-selected={tab === "espp"} className={tab === "espp" ? "active" : ""} onClick={() => setTab("espp")}>
+            ESPP
+          </button>
+          <button role="tab" aria-selected={tab === "explanation"} className={tab === "explanation" ? "active" : ""} onClick={() => setTab("explanation")}>
+            Explanation
+          </button>
+        </nav>
 
-      {tab === "rsu" ? (
-        <RsuCalculator
-          settings={settings}
-          fx={fx}
-          grants={grants}
-          setGrants={setGrants}
-          globalInputs={globalInputs}
-        />
-      ) : null}
-      {tab === "espp" ? (
-        <EsppCalculator
-          settings={settings}
-          fx={fx}
-          plan={espp}
-          setPlan={setEspp}
-          globalInputs={globalInputs}
-        />
-      ) : null}
-      {tab === "explanation" ? <Explanation /> : null}
+        {tab === "rsu" ? (
+          <RsuCalculator
+            settings={settings}
+            fx={fx}
+            grants={grants}
+            setGrants={setGrants}
+            globalInputs={globalInputs}
+          />
+        ) : null}
+        {tab === "espp" ? (
+          <EsppCalculator
+            settings={settings}
+            fx={fx}
+            plan={espp}
+            setPlan={setEspp}
+            globalInputs={globalInputs}
+          />
+        ) : null}
+        {tab === "explanation" ? <Explanation /> : null}
+      </main>
 
       <footer className="footer">
         <p>
