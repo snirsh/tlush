@@ -1,0 +1,44 @@
+name: Rate check
+
+# Monthly check of src/lib/tax/years/ against the ITA booklet and the BTL
+# employee-rates page. Opens or updates one PR on bot/rate-update when figures
+# change, and one issue labelled rate-checker when a source cannot be read.
+on:
+  schedule:
+    - cron: '17 6 3 * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Print the report only. No branch, PR or issue.
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency: rate-check
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+      - run: bun install --frozen-lockfile
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends poppler-utils
+      - name: Run rate checker
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          BASE: ${{ github.ref_name }}
+        run: |
+          if [ "$DRY_RUN" = "true" ]; then
+            bun scripts/rate-check/index.ts --dry-run
+          else
+            bun scripts/rate-check/index.ts --base "$BASE"
+          fi
