@@ -6,7 +6,7 @@ import { BTL_URL, parseBtl, type BtlResult } from "./btl";
 import { buildReport, changesFor, strictFailures, yearsToCheck, type Report, type YearInput } from "./compare";
 import { excerpt, type Problem, type SourceId } from "./fields";
 import { checkoutRefusal, sync } from "./github";
-import { bookletUrl, classifyBooklet, parseBooklet, type BookletResult } from "./ita";
+import { bookletUrl, classifyBooklet, isNextYearProbe, parseBooklet, type BookletResult } from "./ita";
 import { hasCommand, run } from "./proc";
 import { renderText, type FileChange } from "./render";
 import { addYearToIndex, renderNewYearFile, rewriteSpecFile } from "./specFile";
@@ -29,6 +29,7 @@ const USAGE = `Usage: bun scripts/rate-check/index.ts --dry-run [--strict] [--ye
 interface HttpResult {
   status: number;
   contentType: string;
+  url: string;
   bytes: Uint8Array;
 }
 
@@ -37,7 +38,7 @@ async function get(url: string): Promise<HttpResult> {
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const res = await fetch(url, { headers: { "User-Agent": USER_AGENT }, signal: AbortSignal.timeout(TIMEOUT_MS) });
-      const out = { status: res.status, contentType: res.headers.get("content-type") ?? "", bytes: new Uint8Array(await res.arrayBuffer()) };
+      const out = { status: res.status, contentType: res.headers.get("content-type") ?? "", url: res.url, bytes: new Uint8Array(await res.arrayBuffer()) };
       if (res.status < 500 || attempt === 1) return out;
     } catch (e) {
       lastError = e;
@@ -60,7 +61,7 @@ async function pdfToText(pdf: Uint8Array): Promise<string> {
   return r.stdout.toString("utf8");
 }
 
-async function checkBooklet(year: number): Promise<BookletResult | "absent"> {
+async function checkBooklet(year: number, isNextYearProbe: boolean, infoNotes: string[]): Promise<BookletResult | "absent"> {
   const url = bookletUrl(year);
   let res: HttpResult;
   try {
@@ -69,7 +70,11 @@ async function checkBooklet(year: number): Promise<BookletResult | "absent"> {
     return { fields: {}, problems: [networkProblem("ita", url, e, year)] };
   }
   const bodyText = res.contentType.includes("pdf") ? "" : new TextDecoder().decode(res.bytes);
-  const kind = classifyBooklet(year, { status: res.status, contentType: res.contentType, bodyText });
+  const kind = classifyBooklet(year, { status: res.status, contentType: res.contentType, bodyText }, isNextYearProbe);
+  if (kind === "absent" && isNextYearProbe && res.status === 200) {
+    const title = /<title\b[^>]*>([\s\S]*?)<\/title\s*>/i.exec(bodyText)?.[1]?.replace(/\s+/g, " ").trim() || "(none)";
+    infoNotes.push(`ITA ${year}: HTTP ${res.status}, content-type "${res.contentType}", final URL ${res.url}, title "${title}"`);
+  }
   if (kind === "absent") return "absent";
   if (kind !== "pdf") return { fields: {}, problems: [kind] };
   return parseBooklet(await pdfToText(res.bytes), year);
@@ -179,16 +184,19 @@ async function main(): Promise<number> {
 
   const btl: BtlResult | "skipped" = withBtl ? await checkBtl() : "skipped";
   const inputs: YearInput[] = [];
+  const infoNotes: string[] = [];
   for (const year of years) {
-    const booklet = withIta ? await checkBooklet(year) : "skipped";
-    inputs.push({ year, spec: TAX_YEAR_SPECS.find((s) => s.year === year), booklet });
+    const spec = TAX_YEAR_SPECS.find((s) => s.year === year);
+    const nextYearProbe = isNextYearProbe(year, calendarYear, Boolean(spec));
+    const booklet = withIta ? await checkBooklet(year, nextYearProbe, infoNotes) : "skipped";
+    inputs.push({ year, spec, booklet });
   }
   const report = buildReport(inputs, btl, TAX_YEAR_SPECS);
   const { changes, notes } = fileChanges(report, btl);
-  const text = renderText(report, changes);
+  const text = renderText(report, changes, infoNotes);
 
   if (dryRun) {
-    console.log(values.json ? JSON.stringify({ report, notes, changes: changes.map((c) => ({ path: c.path, after: c.after })) }, null, 2) : text);
+    console.log(values.json ? JSON.stringify({ report, notes: [...infoNotes, ...notes], changes: changes.map((c) => ({ path: c.path, after: c.after })) }, null, 2) : text);
     if (!values.strict) return 0;
     const failures = strictFailures(report, calendarYear);
     if (failures.length === 0) return 0;
