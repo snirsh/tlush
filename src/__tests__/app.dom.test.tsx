@@ -4,6 +4,9 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 import { App } from "../App";
+import { readFileSync } from "node:fs";
+
+const stylesheet = readFileSync("src/styles.css", "utf8");
 
 // Drive the real UI in a DOM. Network is stubbed to fail so the app falls back
 // to its offline behaviour (FX = 3.7, no live quotes) and we use the manual
@@ -17,6 +20,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  document.head.querySelectorAll("style").forEach((s) => s.remove());
   vi.unstubAllGlobals();
 });
 
@@ -51,6 +55,50 @@ describe("RSU calculator UI", () => {
     expect(screen.getByText("Total net")).toBeInTheDocument();
     expect(screen.getByText("Marginal tax")).toBeInTheDocument();
     expect(screen.getByText(/Monthly miluim pay/i)).toBeInTheDocument();
+  });
+});
+
+describe("help tooltips", () => {
+  const salaryHelp = /Gross monthly average/;
+
+  it("keeps help text out of the control's name and in its description", () => {
+    render(<App />);
+    const salary = screen.getByRole("spinbutton", { name: "Average monthly salary (₪)" });
+    expect(salary).toHaveAccessibleDescription(salaryHelp);
+    expect(screen.getByRole("combobox", { name: "Tax year" })).toHaveAccessibleDescription(
+      /Which year's brackets/,
+    );
+    expect(screen.getByRole("checkbox", { name: "Set stock price" })).toHaveAccessibleDescription(
+      /live market price is used/,
+    );
+  });
+
+  it("opens on tap and closes on a second tap, Escape, or an outside press", async () => {
+    const style = document.createElement("style");
+    style.textContent = stylesheet;
+    document.head.appendChild(style);
+    const user = userEvent.setup();
+    render(<App />);
+    const tip = screen.getByText(salaryHelp);
+    expect(tip).toHaveAttribute("role", "tooltip");
+    const trigger = screen
+      .getAllByRole("button", { name: "More info" })
+      .find((b) => b.getAttribute("aria-describedby") === tip.id)!;
+    expect(trigger).toHaveAccessibleDescription(salaryHelp);
+    expect(tip).not.toBeVisible();
+
+    await user.click(trigger);
+    expect(tip).toBeVisible();
+    await user.click(trigger);
+    expect(tip).not.toBeVisible();
+
+    await user.click(trigger);
+    await user.keyboard("{Escape}");
+    expect(tip).not.toBeVisible();
+
+    await user.click(trigger);
+    await user.click(screen.getByRole("heading", { name: "Tlush" }));
+    expect(tip).not.toBeVisible();
   });
 });
 

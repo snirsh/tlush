@@ -254,7 +254,7 @@ input:focus, select:focus {
   cursor: pointer;
   flex: none;
 }
-.toggle label {
+.toggle-label {
   cursor: pointer;
   font-size: 14px;
   color: var(--ink);
@@ -262,9 +262,14 @@ input:focus, select:focus {
   align-items: center;
   gap: 6px;
 }
+.toggle-label label { cursor: pointer; }
 
 /* Inline help marker */
+.info-wrap { position: relative; display: inline-flex; }
 .info {
+  appearance: none;
+  margin: 0;
+  padding: 0;
   display: inline-grid;
   place-items: center;
   width: 15px; height: 15px;
@@ -273,12 +278,12 @@ input:focus, select:focus {
   border: 1px solid var(--line-2);
   color: var(--ink-3);
   font: 500 9px var(--sans);
+  letter-spacing: inherit;
   cursor: help;
-  position: relative;
 }
-.info:hover, .info:focus-visible { border-color: var(--ink-2); color: var(--ink-2); outline: none; }
-.info:hover::after, .info:focus::after {
-  content: attr(data-tip);
+.info-wrap:hover > .info, .info:focus-visible { border-color: var(--ink-2); color: var(--ink-2); outline: none; }
+.info-tip {
+  display: none;
   position: absolute;
   bottom: 160%;
   left: 50%;
@@ -293,7 +298,11 @@ input:focus, select:focus {
   letter-spacing: 0;
   z-index: 20;
   box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.8);
+  cursor: help;
 }
+.info-wrap:not([data-dismissed]):hover > .info-tip,
+.info-wrap:not([data-dismissed]) > .info:focus-visible + .info-tip,
+.info-wrap[data-open] > .info-tip { display: block; }
 
 .grant-head { display: flex; align-items: center; justify-content: space-between; }
 .grant-head h2 { margin-bottom: 0; }
@@ -570,7 +579,7 @@ input:focus, select:focus {
 @media (max-width: 560px) {
   .app { padding: 36px 16px 64px; }
   .tabs { gap: 22px; }
-  .info:hover::after, .info:focus::after { width: 180px; }
+  .info-tip { width: 180px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

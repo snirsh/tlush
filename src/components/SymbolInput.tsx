@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { searchSymbols, type SymbolMatch } from "../lib/market/search";
-import { useDebounced } from "./ui";
+import { useDebounced, useFieldControl } from "./ui";
 
 /** Stock-symbol field with type-ahead autocomplete. */
 export function SymbolInput({
@@ -15,6 +15,7 @@ export function SymbolInput({
   const [matches, setMatches] = useState<SymbolMatch[]>([]);
   const [open, setOpen] = useState(false);
   const debounced = useDebounced(value, 250);
+  const control = useFieldControl();
 
   useEffect(() => {
     let active = true;
@@ -33,6 +34,7 @@ export function SymbolInput({
   return (
     <div className="symbol-input">
       <input
+        {...control}
         type="text"
         value={value}
         placeholder="e.g. AAPL or POLI.TA"
