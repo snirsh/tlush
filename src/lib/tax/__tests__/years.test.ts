@@ -22,6 +22,29 @@ describe("Bituah Leumi + health employee rates", () => {
   });
 });
 
+describe("Bituah Leumi reduced threshold and ceiling", () => {
+  it.each([
+    [2024, 7_522, 49_030],
+    [2025, 7_522, 50_695],
+    [2026, 7_703, 51_910],
+  ])("%i: reduced band up to ₪%i/month, ceiling ₪%i/month", (year, threshold, ceiling) => {
+    const ni = yearConstants(year).nationalInsurance;
+    expect(ni.reducedThresholdMonthly).toBe(threshold);
+    expect(ni.ceilingMonthly).toBe(ceiling);
+  });
+
+  it("splits a 2026 slice across the ₪7,703 threshold", () => {
+    // 7,600 → 7,703 reduced: 103 × 4.27% = 4.3981
+    // 7,703 → 7,800 full:     97 × 12.17% = 11.8049
+    expect(bituahOnMonthlySlice(7_600, 200, yearConstants(2026))).toBeCloseTo(16.203, 4);
+  });
+
+  it("stops a 2026 slice at the ₪51,910 ceiling", () => {
+    // 51,000 → 51,910 full: 910 × 12.17% = 110.747; nothing above the ceiling.
+    expect(bituahOnMonthlySlice(51_000, 2_000, yearConstants(2026))).toBeCloseTo(110.747, 4);
+  });
+});
+
 describe("2026 income-tax brackets (Amendment 288, §121)", () => {
   it("widens the 20% and 31% brackets to 228,000 and 301,200", () => {
     expect(yearConstants(2026).incomeTax.brackets.slice(0, 5)).toEqual([
