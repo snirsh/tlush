@@ -11,12 +11,14 @@ export interface BookletResult {
 }
 
 /**
- * What a booklet response means. 404 is the normal "not published yet" answer.
- * Anything else that is not a 200 PDF is a problem to report.
+ * 404 is the normal "not published yet" answer. Only an unspecced next-year probe
+ * treats 200 non-PDF as absent; once that year is current, strict handling catches
+ * any hidden publication at the latest on Jan 1.
  */
 export function classifyBooklet(
   year: number,
   res: { status: number; contentType: string; bodyText: string },
+  isNextYearProbe = false,
 ): "pdf" | "absent" | Problem {
   const url = bookletUrl(year);
   if (res.status === 404) return "absent";
@@ -24,6 +26,7 @@ export function classifyBooklet(
     return { source: "ita", url, year, kind: "http", status: res.status, message: `Unexpected HTTP ${res.status}`, excerpt: excerpt(res.bodyText) };
   }
   if (!res.contentType.toLowerCase().startsWith("application/pdf")) {
+    if (isNextYearProbe) return "absent";
     return {
       source: "ita",
       url,
