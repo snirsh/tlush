@@ -23,7 +23,7 @@ export function monthlySalaryBase(
   const yc = yearConstants(year);
   const base =
     monthlySalary + Math.max(0, saleIncomePortion) / BENEFIT_BASE_MONTHS;
-  return Math.min(base, yc.bituah.ceilingMonthly);
+  return Math.min(base, yc.nationalInsurance.ceilingMonthly);
 }
 
 /** Gross monthly miluim (reserve duty) pay. */
