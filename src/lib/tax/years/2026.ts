@@ -15,8 +15,9 @@ export const TAX_YEAR_2026: TaxYearSpec = {
       { upTo: 228_000, rate: 0.2 },
       { upTo: 301_200, rate: 0.31 },
       { upTo: 560_280, rate: 0.35 },
-      { upTo: 721_560, rate: 0.47 },
-      { upTo: Infinity, rate: 0.5 },
+      // 47% on every additional shekel. The 3% above 721,560 is the separate
+      // section 121B surtax below.
+      { upTo: Infinity, rate: 0.47 },
     ],
   },
   nationalInsurance: {

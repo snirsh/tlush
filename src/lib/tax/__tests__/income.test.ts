@@ -40,6 +40,6 @@ describe("marginalRateAt", () => {
   it("returns the bracket rate at the income level", () => {
     expect(marginalRateAt(50_000, yc)).toBe(0.1);
     expect(marginalRateAt(300_000, yc)).toBe(0.35);
-    expect(marginalRateAt(1_000_000, yc)).toBe(0.5);
+    expect(marginalRateAt(1_000_000, yc)).toBe(0.47);
   });
 });
