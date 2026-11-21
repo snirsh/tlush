@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { TAX_YEAR_SPECS } from "../../src/lib/tax/years";
 import { BTL_URL, parseBtl, type BtlResult } from "./btl";
-import { buildReport, changesFor, yearsToCheck, type Report, type YearInput } from "./compare";
+import { buildReport, changesFor, strictFailures, yearsToCheck, type Report, type YearInput } from "./compare";
 import { excerpt, type Problem, type SourceId } from "./fields";
 import { checkoutRefusal, sync } from "./github";
 import { bookletUrl, classifyBooklet, parseBooklet, type BookletResult } from "./ita";
@@ -15,9 +15,10 @@ const USER_AGENT = "tlush-rate-checker (+https://github.com/snirsh/tlush)";
 const TIMEOUT_MS = 30_000;
 const YEARS_DIR = "src/lib/tax/years";
 
-const USAGE = `Usage: bun scripts/rate-check/index.ts --dry-run [--year 2026] [--json] [--source ita|btl]
+const USAGE = `Usage: bun scripts/rate-check/index.ts --dry-run [--strict] [--year 2026] [--json] [--source ita|btl]
 
   --dry-run   Fetch, parse, compare, print the report and the would-be diff. No writes, no GitHub calls.
+  --strict    (with --dry-run) Exit 1 unless every field of the current calendar year is ok.
   --year N    Check only tax year N.
   --json      Print the report as JSON.
   --source    Check only one source (ita: the ITA booklet, needs pdftotext; btl: the BTL page).
@@ -122,6 +123,7 @@ async function main(): Promise<number> {
     options: {
       "dry-run": { type: "boolean", default: false },
       json: { type: "boolean", default: false },
+      strict: { type: "boolean", default: false },
       year: { type: "string" },
       source: { type: "string" },
       "default-branch": { type: "string" },
@@ -140,6 +142,10 @@ async function main(): Promise<number> {
   const dryRun = values["dry-run"];
   if (!dryRun && process.env.GITHUB_ACTIONS !== "true") {
     console.error(`Only --dry-run is allowed outside GitHub Actions.\n\n${USAGE}`);
+    return 2;
+  }
+  if (!dryRun && values.strict) {
+    console.error(`--strict is only allowed with --dry-run.\n\n${USAGE}`);
     return 2;
   }
   if (!dryRun && source !== "all") {
@@ -164,7 +170,8 @@ async function main(): Promise<number> {
   }
 
   const specYears = TAX_YEAR_SPECS.map((s) => s.year);
-  const years = values.year ? [Number(values.year)] : yearsToCheck(specYears, new Date().getUTCFullYear());
+  const calendarYear = new Date().getUTCFullYear();
+  const years = values.year ? [Number(values.year)] : yearsToCheck(specYears, calendarYear);
   if (years.some((y) => !Number.isInteger(y) || y < 2000)) {
     console.error(`--year must be a 4-digit year\n\n${USAGE}`);
     return 2;
@@ -182,7 +189,11 @@ async function main(): Promise<number> {
 
   if (dryRun) {
     console.log(values.json ? JSON.stringify({ report, notes, changes: changes.map((c) => ({ path: c.path, after: c.after })) }, null, 2) : text);
-    return 0;
+    if (!values.strict) return 0;
+    const failures = strictFailures(report, calendarYear);
+    if (failures.length === 0) return 0;
+    console.error(`--strict: ${calendarYear} is not fully ok:\n${failures.map((f) => `  ${f}`).join("\n")}`);
+    return 1;
   }
 
   const server = process.env.GITHUB_SERVER_URL ?? "https://github.com";
