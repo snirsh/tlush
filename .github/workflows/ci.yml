@@ -4,6 +4,9 @@ on:
   push:
     branches: ["**"]
   pull_request:
+  # PRs opened by the rate checker use GITHUB_TOKEN, which does not trigger
+  # this workflow. Run it by hand on bot/rate-update.
+  workflow_dispatch:
 
 jobs:
   build-test:

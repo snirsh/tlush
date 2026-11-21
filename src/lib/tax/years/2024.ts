@@ -35,4 +35,9 @@ export const TAX_YEAR_2024: TaxYearSpec = {
     // https://www.gov.il/BlobFolder/service/reporting-and-payment-2025-annual-tax-report-for-individuals/he/Service_Pages_Income_tax_annual-report-2026_1399y-2025.pdf
     section102CapitalRate: 0.25,
   },
+  creditPoint: {
+    // Source: ITA monthly deductions booklet 2024, section "סכומים מתואמים"
+    // https://www.gov.il/BlobFolder/generalpage/income-tax-monthly-deductions-booklet/he/generalInformation_income-tax-monthly-deductions-booklet_monthly-deductions-booklet-2024.pdf
+    monthlyValue: 242,
+  },
 };
