@@ -5,7 +5,7 @@ export function annualIncomeTax(annualIncome: number, yc: YearConstants): number
   if (annualIncome <= 0) return 0;
   let tax = 0;
   let lower = 0;
-  for (const bracket of yc.brackets) {
+  for (const bracket of yc.incomeTax.brackets) {
     if (annualIncome <= lower) break;
     const taxableInBracket = Math.min(annualIncome, bracket.upTo) - lower;
     tax += taxableInBracket * bracket.rate;
@@ -32,10 +32,26 @@ export function marginalIncomeTax(
   );
 }
 
-/** The top marginal rate that applies at a given annual income level. */
+/**
+ * The §121 bracket rate that applies at a given annual income level. Excludes
+ * the §121B surtax, which `surtax()` applies separately.
+ */
 export function marginalRateAt(annualIncome: number, yc: YearConstants): number {
-  for (const bracket of yc.brackets) {
+  for (const bracket of yc.incomeTax.brackets) {
     if (annualIncome <= bracket.upTo) return bracket.rate;
   }
-  return yc.brackets[yc.brackets.length - 1].rate;
+  return topBracketRate(yc);
+}
+
+function topBracketRate(yc: YearConstants): number {
+  return yc.incomeTax.brackets[yc.incomeTax.brackets.length - 1].rate;
+}
+
+/**
+ * The rate a Section 102 trustee withholds on the income portion: the top §121
+ * bracket plus the §121B surtax (47% + 3% = 50%). The excess over the real
+ * marginal tax comes back via salary or the annual return.
+ */
+export function trusteeWithholdingRate(yc: YearConstants): number {
+  return topBracketRate(yc) + yc.surtax.rate;
 }

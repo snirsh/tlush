@@ -1,6 +1,6 @@
 import { SECTION_102_HOLDING_YEARS, yearConstants } from "./constants";
 import { computeFees, type FeeBreakdown } from "./fees";
-import { marginalIncomeTax } from "./income";
+import { marginalIncomeTax, trusteeWithholdingRate } from "./income";
 import { bituahOnExtra } from "./bituah";
 import { surtax } from "./surtax";
 import type { SaleFees, TaxProfile } from "./types";
@@ -133,13 +133,13 @@ export function computeEspp(
   let taxOnDiscountPaid = 0;
 
   if (input.withTrustee) {
-    capitalTax = capitalBasis * yc.capitalGainsRate;
+    capitalTax = capitalBasis * yc.capitalGains.section102CapitalRate;
   } else {
     // Direct purchase: the discount tax was already withheld at purchase.
     taxOnDiscountPaid = marginalTax + bituah;
     netMarginal = 0;
     netBituah = 0;
-    capitalTax = capitalBasis * yc.capitalGainsRate;
+    capitalTax = capitalBasis * yc.capitalGains.section102CapitalRate;
   }
 
   const totalTax = netMarginal + netBituah + capitalTax;
@@ -150,8 +150,9 @@ export function computeEspp(
   const netGain = totalNet - grossInvestment;
 
   // Income-tax over-withholding returned via salary (trustee mode only).
-  const topRate = yc.brackets[yc.brackets.length - 1].rate;
-  const withheldIncomeTax = input.withTrustee ? discountIncome * topRate : 0;
+  const withheldIncomeTax = input.withTrustee
+    ? discountIncome * trusteeWithholdingRate(yc)
+    : 0;
   const netToSalary = input.withTrustee ? withheldIncomeTax - marginalTax : 0;
   const netToBank = input.withTrustee
     ? gross - feesIls.total - conversionFee - netBituah - capitalTax - withheldIncomeTax

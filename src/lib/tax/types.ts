@@ -29,13 +29,32 @@ export interface TaxProfile {
   noIncomeYear: boolean;
 }
 
-/** The set of constants that define a single Israeli tax year. */
-export interface YearConstants {
+/** One §121 income-tax bracket: `rate` applies to annual income up to `upTo`. */
+export interface IncomeTaxBracket {
+  upTo: number;
+  rate: number;
+}
+
+/**
+ * Everything that defines one Israeli tax year, grouped by domain. One file per
+ * year lives in `years/`, and the engine reads only from these specs.
+ *
+ * Rates are annualised. When a rate changes mid-year, the spec carries the rate
+ * in force for most of the year and its file documents the change. In 2025 the
+ * full health rate rose from 5.16% to 5.17% on 1 February, so 2025 uses 12.17%.
+ * That overstates by at most 0.01% of one month's income, under ₪1 per ₪100,000
+ * of annual income.
+ *
+ * Reserved future siblings, not modelled yet: creditPoints, pension, hishtalmut.
+ */
+export interface TaxYearSpec {
   year: number;
-  /** Progressive income-tax brackets (annual, ILS). */
-  brackets: { upTo: number; rate: number }[];
+  incomeTax: {
+    /** Progressive §121 brackets (annual, ILS), ascending. The last is open-ended. */
+    brackets: readonly IncomeTaxBracket[];
+  };
   /** Bituah Leumi + health insurance (employee side). */
-  bituah: {
+  nationalInsurance: {
     /** Monthly income threshold below which the reduced rate applies. */
     reducedThresholdMonthly: number;
     /** Combined NI + health reduced rate. */
@@ -45,9 +64,7 @@ export interface YearConstants {
     /** Monthly income ceiling above which no contributions are due. */
     ceilingMonthly: number;
   };
-  /** Capital-gains tax rate (Section 102 capital track). */
-  capitalGainsRate: number;
-  /** Surtax ("mas yesef"). */
+  /** Surtax ("mas yesef", §121B). */
   surtax: {
     /** Annual income threshold above which surtax applies. */
     thresholdAnnual: number;
@@ -56,4 +73,10 @@ export interface YearConstants {
     /** Additional surtax rate on capital / passive income above the threshold. */
     capitalExtraRate: number;
   };
+  capitalGains: {
+    /** Capital-gains rate on the capital portion under the Section 102 capital track. */
+    section102CapitalRate: number;
+  };
 }
+
+export type YearConstants = TaxYearSpec;

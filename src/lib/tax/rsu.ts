@@ -1,6 +1,6 @@
 import { SECTION_102_HOLDING_YEARS, yearConstants } from "./constants";
 import { computeFees, type FeeBreakdown } from "./fees";
-import { marginalIncomeTax } from "./income";
+import { marginalIncomeTax, trusteeWithholdingRate } from "./income";
 import { bituahOnExtra } from "./bituah";
 import { surtax } from "./surtax";
 import type { SaleFees, TaxProfile } from "./types";
@@ -123,17 +123,14 @@ export function computeRsuGrant(
     : input.workplaceMonthlySalary || profile.monthlySalary;
   const bituah = bituahOnExtra(bituahSalary, incomePortion, yc);
 
-  const capitalTax = capitalPortion * yc.capitalGainsRate;
+  const capitalTax = capitalPortion * yc.capitalGains.section102CapitalRate;
 
   const totalTax = marginalTax + bituah + capitalTax;
   const averageTaxRate = gross > 0 ? totalTax / gross : 0;
 
   const totalNet = gross - feesIls.total - conversionFee - totalTax;
 
-  // Trustees withhold income tax at the top marginal rate, then the difference
-  // versus the real marginal rate is returned via salary (or as a refund).
-  const topRate = yc.brackets[yc.brackets.length - 1].rate;
-  const withheldIncomeTax = incomePortion * topRate;
+  const withheldIncomeTax = incomePortion * trusteeWithholdingRate(yc);
   const netToSalary = withheldIncomeTax - marginalTax;
   const netToBank =
     gross - feesIls.total - conversionFee - bituah - capitalTax - withheldIncomeTax;
