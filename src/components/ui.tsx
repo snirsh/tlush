@@ -322,5 +322,14 @@ export function AnimatedValue({
     };
   }, [value, duration, reduce]);
 
-  return <span className="num">{format(display)}</span>;
+  const shown = format(display);
+  const final = format(value);
+  if (shown === final) return <span className="num">{final}</span>;
+  // Mid-roll: screen readers get only the destination, never the ticking digits.
+  return (
+    <span className="num">
+      <span aria-hidden="true">{shown}</span>
+      <span className="visually-hidden">{final}</span>
+    </span>
+  );
 }
