@@ -45,6 +45,10 @@ src/assets/fonts/   Self-hosted Manrope + IBM Plex Mono (OFL, see LICENSE.md).
                     vite.config.ts preloads the two above-the-fold files.
 public/tickers.json Offline symbol-autocomplete fallback list.
 e2e/                Playwright smoke tests + the axe gate (a11y.spec.ts).
+scripts/rate-check/ Monthly checker (.github/workflows/rate-check.yml) that compares
+                    years/ with the ITA booklet and the BTL rates page, then opens
+                    a data PR or an issue. Not part of the app bundle: nothing in
+                    src/ may import it.
 ```
 
 ## Conventions
@@ -75,6 +79,8 @@ bun run test:e2e     # playwright browser smoke tests (needs: bunx playwright in
 bun run lint         # eslint
 bun run typecheck
 bun run build        # tsc + vite build → dist/
+bun scripts/rate-check/index.ts --dry-run   # live official-rate check, no writes
+                                            # (needs pdftotext; --source btl skips it)
 ```
 
 Always use `bun run test`, never `bun test` — the latter invokes bun's own test
