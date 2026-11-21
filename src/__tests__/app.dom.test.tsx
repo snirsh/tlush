@@ -58,6 +58,48 @@ describe("RSU calculator UI", () => {
   });
 });
 
+describe("tabs", () => {
+  it("links each tab to the panel it shows, with one tab stop", () => {
+    render(<App />);
+    expect(screen.getByRole("tablist")).toHaveAccessibleName();
+    const [rsu, espp, explanation] = screen.getAllByRole("tab");
+    expect(rsu).toHaveAttribute("aria-selected", "true");
+    expect(rsu).toHaveAttribute("tabindex", "0");
+    expect(espp).toHaveAttribute("tabindex", "-1");
+    expect(explanation).toHaveAttribute("tabindex", "-1");
+    const panel = screen.getByRole("tabpanel", { name: "RSU" });
+    expect(rsu).toHaveAttribute("aria-controls", panel.id);
+    expect(panel).toHaveAttribute("tabindex", "0");
+  });
+
+  it("moves focus and selection with arrows (wrapping), Home and End", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const tab = (name: string) => screen.getByRole("tab", { name });
+    const expectActive = (name: string) => {
+      expect(tab(name)).toHaveFocus();
+      expect(tab(name)).toHaveAttribute("aria-selected", "true");
+      expect(screen.getByRole("tabpanel", { name })).toBeInTheDocument();
+    };
+
+    tab("RSU").focus();
+    await user.keyboard("{ArrowRight}");
+    expectActive("ESPP");
+    await user.keyboard("{ArrowRight}");
+    expectActive("Explanation");
+    await user.keyboard("{ArrowRight}");
+    expectActive("RSU");
+    await user.keyboard("{ArrowLeft}");
+    expectActive("Explanation");
+    await user.keyboard("{Home}");
+    expectActive("RSU");
+    await user.keyboard("{End}");
+    expectActive("Explanation");
+    await user.tab();
+    expect(screen.getByRole("tabpanel", { name: "Explanation" })).toHaveFocus();
+  });
+});
+
 describe("form labels", () => {
   function expectEveryControlNamed() {
     const controls = document.querySelectorAll("input, select");
