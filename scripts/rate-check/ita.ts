@@ -45,6 +45,7 @@ const TABLE_HEADING_STEM = "שיעורי המס החלים";
 const BRACKETS_HEADING = `${TABLE_HEADING_STEM} על הכנסה מיגיעה אישית`;
 // A row of the annual column: rate first, then the bracket's upper bound.
 const BRACKET_ROW = /^\s*(\d{1,2}(?:\.\d{1,2})?)%\s+(\d{1,3}(?:,\d{3})+)\s/;
+const BRACKET_CELL = /(\d{1,2}(?:\.\d{1,2})?)%\s+(\d{1,3}(?:,\d{3})+)/;
 const TOP_ROW = /^\s*(\d{1,2}(?:\.\d{1,2})?)%\s+מכל שקל נוסף/;
 const SURTAX = /עלתה על\s*₪?\s*(\d{1,3}(?:,\d{3})+)/g;
 const SURTAX_PER_YEAR = /₪\s*(\d{1,3}(?:,\d{3})+)\s*לשנה\)/g;
@@ -69,9 +70,11 @@ export function parseBooklet(rawText: string, year: number): BookletResult {
     return { fields, problems };
   }
 
-  const tables = bracketTables(text);
+  const { tables, refused } = bracketTables(text);
   const distinct = new Set(tables.map((t) => JSON.stringify(t.brackets)));
-  if (tables.length === 0) {
+  if (refused.length > 0) {
+    fail("mismatch", refused.join("; "), text.indexOf(BRACKETS_HEADING));
+  } else if (tables.length === 0) {
     fail("missing", `Annual bracket table under "${BRACKETS_HEADING}" not found or incomplete`);
   } else if (distinct.size > 1) {
     fail("ambiguous", `${tables.length} bracket tables with different values`, tables[1].at);
@@ -98,9 +101,15 @@ export function parseBooklet(rawText: string, year: number): BookletResult {
   return { fields, problems };
 }
 
-/** Each complete annual table: rows after the heading, ended by the "47% on every extra shekel" row. */
-function bracketTables(text: string): { brackets: Bracket[]; at: number }[] {
+/**
+ * Each complete annual table: rows after the heading, ended by the "47% on every
+ * extra shekel" row. Every row also carries the monthly column, and the booklet's
+ * annual bound is exactly 12 times the monthly one. A row that breaks that rule
+ * means the columns were not read as expected, so the whole table is refused.
+ */
+function bracketTables(text: string): { tables: { brackets: Bracket[]; at: number }[]; refused: string[] } {
   const tables: { brackets: Bracket[]; at: number }[] = [];
+  const refused: string[] = [];
   let from = text.indexOf(BRACKETS_HEADING);
   while (from !== -1) {
     const brackets: Bracket[] = [];
@@ -115,12 +124,19 @@ function bracketTables(text: string): { brackets: Bracket[]; at: number }[] {
       }
       const row = BRACKET_ROW.exec(line);
       if (!row) break;
-      brackets.push({ upTo: parseIls(row[2]), rateBp: percentToBp(row[1]) });
+      const bracket = { upTo: parseIls(row[2]), rateBp: percentToBp(row[1]) };
+      const monthly = BRACKET_CELL.exec(line.slice(row[0].length));
+      if (!monthly || percentToBp(monthly[1]) !== bracket.rateBp || parseIls(monthly[2]) * 12 !== bracket.upTo) {
+        refused.push(`bracket row "${line.trim()}": annual bound is not 12 × the monthly bound at the same rate`);
+        brackets.length = 0;
+        break;
+      }
+      brackets.push(bracket);
     }
     if (isCompleteTable(brackets)) tables.push({ brackets, at: from });
     from = text.indexOf(BRACKETS_HEADING, from + 1);
   }
-  return tables;
+  return { tables, refused };
 }
 
 function isCompleteTable(bs: Bracket[]): boolean {
