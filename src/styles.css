@@ -458,8 +458,14 @@ input:focus, select:focus {
   gap: 16px;
   padding: 12px 0;
   color: var(--ink);
-  /* These rows used to be <button>s and render in the UA button font; keep it. */
+  /* These rows used to be <button>s; keep the UA control font they rendered in
+     (Arial on Linux Chromium, the system font on macOS). The keyword shorthand
+     is Chromium/WebKit-only; Firefox drops it and keeps the first line. */
   font: 400 14px/normal system-ui, sans-serif;
+  font: -webkit-small-control;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: normal;
   letter-spacing: normal;
   text-rendering: auto;
   text-align: left;
