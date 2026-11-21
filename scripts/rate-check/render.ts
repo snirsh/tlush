@@ -29,7 +29,7 @@ export const readHash = (body: string): string | undefined => HASH_MARKER.exec(b
 
 const fmt = <K extends FieldKey>(key: K, v: Fields[K] | undefined): string => (v === undefined ? "?" : formatField(key, v));
 
-export function renderText(report: Report, changes: FileChange[]): string {
+export function renderText(report: Report, changes: FileChange[], infoNotes: string[] = []): string {
   const out: string[] = [];
   for (const y of report.years) {
     out.push(`== ${y.year}: ${describeOutcome(y)}`);
@@ -46,6 +46,7 @@ export function renderText(report: Report, changes: FileChange[]): string {
       out.push(`  carried over from ${y.carriedFrom}, not checked: ${CARRIED_OVER.join(", ")}`);
     }
   }
+  if (infoNotes.length) out.push("", "== Notes", ...infoNotes.map((note) => `  ${note}`));
   out.push("", report.problems.length ? `== Problems (${report.problems.length})` : "== Problems: none");
   for (const p of report.problems) out.push(`  [${p.source}${p.year ? ` ${p.year}` : ""}] ${p.kind}: ${p.message}`);
   if (changes.length) out.push("", "== Would-be file changes");
