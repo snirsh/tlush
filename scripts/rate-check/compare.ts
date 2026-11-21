@@ -105,5 +105,14 @@ export function changesFor(outcome: Extract<YearOutcome, { kind: "existing" }>):
   return out;
 }
 
-export const hasChanges = (r: Report): boolean =>
+/** What makes a `--strict` run fail: `year` must have a spec and every field of it must match. */
+export function strictFailures(report: Report, year: number): string[] {
+  const outcome = report.years.find((y) => y.year === year);
+  if (outcome?.kind !== "existing") return [`${year}: no spec checked (${outcome?.kind ?? "not in this run"})`];
+  return outcome.checks
+    .filter((c) => c.status !== "match")
+    .map((c) => `${year} ${c.key}: ${c.status}${c.note ? ` (${c.note})` : ""}`);
+}
+
+export const hasChanges =(r: Report): boolean =>
   r.years.some((y) => y.kind === "new" || (y.kind === "existing" && y.checks.some((c) => c.status === "diff")));

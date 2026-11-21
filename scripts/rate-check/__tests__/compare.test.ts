@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { TAX_YEAR_SPECS } from "../../../src/lib/tax/years";
 import type { TaxYearSpec } from "../../../src/lib/tax/types";
 import { parseBtl, type BtlResult } from "../btl";
-import { buildReport, changesFor, hasChanges, yearsToCheck, type YearOutcome } from "../compare";
+import { buildReport, changesFor, hasChanges, strictFailures, yearsToCheck, type YearInput, type YearOutcome } from "../compare";
 import { parseBooklet, type BookletResult } from "../ita";
 
 const fixture = (name: string) => readFileSync(new URL(`../__fixtures__/${name}`, import.meta.url), "utf8");
@@ -116,5 +116,34 @@ describe("buildReport", () => {
       blFullRateBp: "unchecked",
     });
     expect(report.problems.map((p) => `${p.source}:${p.kind}`)).toEqual(["btl:mismatch", "ita:missing"]);
+  });
+});
+
+describe("strictFailures", () => {
+  const report2026 = (booklet: YearInput["booklet"], btl: BtlResult | "skipped" = btlNow, s: TaxYearSpec = spec(2026)) =>
+    buildReport([{ year: 2026, spec: s, booklet }], btl, TAX_YEAR_SPECS);
+
+  it("passes when every field of the year matches", () => {
+    expect(strictFailures(report2026(booklet2026), 2026)).toEqual([]);
+  });
+
+  it("fails on a field the booklet parser could not read", () => {
+    const report = report2026(parseBooklet(fixture("ita-2026-no-brackets.txt"), 2026));
+    expect(strictFailures(report, 2026)).toEqual(["2026 brackets: unchecked (could not be read from the booklet)"]);
+  });
+
+  it("fails on a field that differs from the spec", () => {
+    const stale: TaxYearSpec = { ...spec(2026), nationalInsurance: { ...spec(2026).nationalInsurance, ceilingMonthly: 50_695 } };
+    expect(strictFailures(report2026(booklet2026, btlNow, stale), 2026)).toEqual(["2026 blCeilingMonthly: diff"]);
+  });
+
+  it("fails on every field of a source the run skipped", () => {
+    const failures = strictFailures(report2026(booklet2026, "skipped"), 2026);
+    expect(failures.length).toBeGreaterThan(0);
+    expect(failures.every((f) => f.endsWith("(BTL source not checked in this run)"))).toBe(true);
+  });
+
+  it("fails when the year is not in the report", () => {
+    expect(strictFailures(report2026(booklet2026), 2027)).toEqual(["2027: no spec checked (not in this run)"]);
   });
 });
