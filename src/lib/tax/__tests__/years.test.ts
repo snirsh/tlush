@@ -45,6 +45,13 @@ describe("top bracket is 47%; the 3% above 721,560 is surtax only", () => {
   });
 });
 
+describe("yearConstants", () => {
+  it("throws a RangeError naming the year and the supported years", () => {
+    expect(() => yearConstants(2023)).toThrow(RangeError);
+    expect(() => yearConstants(2023)).toThrow(/2023.*2024, 2025, 2026/);
+  });
+});
+
 describe("Bituah Leumi + health employee rates", () => {
   it("2024 is 3.5% reduced (0.4% + 3.1%) and 12% full (7% + 5%)", () => {
     const ni = yearConstants(2024).nationalInsurance;
