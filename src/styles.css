@@ -436,14 +436,30 @@ input:focus, select:focus {
   justify-content: space-between;
   gap: 16px;
   padding: 12px 0;
-  background: none;
-  border: 0;
   color: var(--ink);
-  font-size: 14px;
+  /* These rows used to be <button>s and render in the UA button font; keep it. */
+  font: 400 14px/normal system-ui, sans-serif;
+  letter-spacing: normal;
+  text-rendering: auto;
   text-align: left;
   cursor: default;
 }
 .result-row.expandable .result-head { cursor: pointer; }
+.result-toggle {
+  appearance: none;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
 .result-row.expandable:hover .result-label { color: var(--ink-2); }
 .result-label {
   display: inline-flex;
