@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { btlForYear, parseBtl } from "../btl";
-import { classifyBooklet, parseBooklet, stripBidi } from "../ita";
+import { classifyBooklet, isNextYearProbe, parseBooklet, stripBidi } from "../ita";
 
 const fixture = (name: string) => readFileSync(new URL(`../__fixtures__/${name}`, import.meta.url), "utf8");
 
@@ -88,6 +88,14 @@ describe("booklet response classification", () => {
     }, true)).toBe("absent");
   });
 
+  it("recognizes a next-year PDF served with an HTML content type", () => {
+    expect(classifyBooklet(2027, {
+      status: 200,
+      contentType: "text/html; charset=utf-8",
+      bodyText: "\uFEFF \n%PDF-1.7",
+    }, true)).toBe("pdf");
+  });
+
   it("reports an HTML page served with 200 for the current year as a content-type problem", () => {
     const res = classifyBooklet(2026, { status: 200, contentType: "text/html; charset=utf-8", bodyText: fixture("govil-not-found-200.html") });
     expect(res).toMatchObject({ source: "ita", year: 2026, kind: "content-type", status: 200 });
@@ -107,6 +115,14 @@ describe("booklet response classification", () => {
   it("accepts a 200 PDF", () => {
     expect(classifyBooklet(2026, { status: 200, contentType: "application/pdf", bodyText: "" })).toBe("pdf");
     expect(classifyBooklet(2027, { status: 200, contentType: "application/pdf", bodyText: "" }, true)).toBe("pdf");
+  });
+});
+
+describe("next-year probe selection", () => {
+  it("probes only the next year when no spec exists", () => {
+    expect(isNextYearProbe(2027, 2026, false)).toBe(true);
+    expect(isNextYearProbe(2027, 2026, true)).toBe(false);
+    expect(isNextYearProbe(2026, 2026, false)).toBe(false);
   });
 });
 

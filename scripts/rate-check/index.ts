@@ -6,7 +6,7 @@ import { BTL_URL, parseBtl, type BtlResult } from "./btl";
 import { buildReport, changesFor, strictFailures, yearsToCheck, type Report, type YearInput } from "./compare";
 import { excerpt, type Problem, type SourceId } from "./fields";
 import { checkoutRefusal, sync } from "./github";
-import { bookletUrl, classifyBooklet, parseBooklet, type BookletResult } from "./ita";
+import { bookletUrl, classifyBooklet, isNextYearProbe, parseBooklet, type BookletResult } from "./ita";
 import { hasCommand, run } from "./proc";
 import { renderText, type FileChange } from "./render";
 import { addYearToIndex, renderNewYearFile, rewriteSpecFile } from "./specFile";
@@ -187,8 +187,8 @@ async function main(): Promise<number> {
   const infoNotes: string[] = [];
   for (const year of years) {
     const spec = TAX_YEAR_SPECS.find((s) => s.year === year);
-    const isNextYearProbe = year === calendarYear + 1 && !spec;
-    const booklet = withIta ? await checkBooklet(year, isNextYearProbe, infoNotes) : "skipped";
+    const nextYearProbe = isNextYearProbe(year, calendarYear, Boolean(spec));
+    const booklet = withIta ? await checkBooklet(year, nextYearProbe, infoNotes) : "skipped";
     inputs.push({ year, spec, booklet });
   }
   const report = buildReport(inputs, btl, TAX_YEAR_SPECS);
