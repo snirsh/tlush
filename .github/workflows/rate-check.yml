@@ -35,10 +35,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           DRY_RUN: ${{ inputs.dry_run }}
-          BASE: ${{ github.ref_name }}
         run: |
           if [ "$DRY_RUN" = "true" ]; then
             bun scripts/rate-check/index.ts --dry-run
           else
-            bun scripts/rate-check/index.ts --base "$BASE"
+            default_branch=$(gh repo view "$GITHUB_REPOSITORY" --json defaultBranchRef -q .defaultBranchRef.name)
+            bun scripts/rate-check/index.ts --default-branch "$default_branch"
           fi

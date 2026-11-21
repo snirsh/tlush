@@ -4,7 +4,7 @@ import { TAX_YEAR_SPECS } from "../../../src/lib/tax/years";
 import type { TaxYearSpec } from "../../../src/lib/tax/types";
 import { parseBtl } from "../btl";
 import { buildReport, type Report } from "../compare";
-import { BOT_BRANCH, sync, type Shell } from "../github";
+import { BOT_BRANCH, checkoutRefusal, sync, type Shell } from "../github";
 import { parseBooklet } from "../ita";
 import { hashOf, hashMarker, renderPrBody, type FileChange } from "../render";
 
@@ -44,6 +44,30 @@ function fakeShell(open: { pr?: { number: number; body: string }; issue?: { numb
 
 const args = (report: Report, changes: FileChange[] = []) => ({ report, changes, notes: [], btl: btl.page, base: "master", runUrl: RUN });
 const mutating = (calls: string[]) => calls.filter((c) => !/^gh (pr|issue) list /.test(c));
+
+describe("checkoutRefusal", () => {
+  it("allows a run checked out on the default branch", () => {
+    expect(checkoutRefusal("refs/heads/main", "main")).toBeNull();
+  });
+
+  it.each([
+    ["a feature branch", "refs/heads/chore/rate-checker", "master"],
+    ["the bot branch", `refs/heads/${BOT_BRANCH}`, "master"],
+    ["a pull request merge ref", "refs/pull/3/merge", "master"],
+    ["a tag named like the default branch", "refs/tags/master", "master"],
+    ["an unknown ref", undefined, "master"],
+  ])("refuses %s", (_case, ref, defaultBranch) => {
+    expect(checkoutRefusal(ref, defaultBranch)).toContain("not refs/heads/master");
+  });
+
+  it("refuses a missing default branch", () => {
+    expect(checkoutRefusal("refs/heads/master", undefined)).toContain("--default-branch is required");
+  });
+
+  it("refuses the bot branch as the default branch, so the PR can never target itself", () => {
+    expect(checkoutRefusal(`refs/heads/${BOT_BRANCH}`, BOT_BRANCH)).toContain("cannot be the bot branch");
+  });
+});
 
 describe("sync", () => {
   it("does nothing when everything matches and nothing is open", async () => {
