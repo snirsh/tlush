@@ -22,10 +22,10 @@ export const TAX_YEAR_2026: TaxYearSpec = {
   nationalInsurance: {
     // Source: BTL employee rates
     // https://www.btl.gov.il/Insurance/Rates/Pages/%D7%9C%D7%A2%D7%95%D7%91%D7%93%D7%99%D7%9D%20%D7%A9%D7%9B%D7%99%D7%A8%D7%99%D7%9D.aspx
-    reducedThresholdMonthly: 7_522,
+    reducedThresholdMonthly: 7_703,
     reducedRate: 0.0427, // 1.04% NI + 3.23% health
     fullRate: 0.1217, // 7% NI + 5.17% health
-    ceilingMonthly: 50_695,
+    ceilingMonthly: 51_910,
   },
   surtax: {
     // Source: ITA monthly deductions booklet 2026 (link above)
