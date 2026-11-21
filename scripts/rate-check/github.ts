@@ -32,6 +32,19 @@ export const realShell: Shell = {
   writeFile: (path, text) => writeFileSync(path, text),
 };
 
+/**
+ * Why a run that writes to GitHub must stop, or null. The bot PR always targets
+ * the default branch and is built from it, so any other checkout is refused.
+ */
+export function checkoutRefusal(gitRef: string | undefined, defaultBranch: string | undefined): string | null {
+  if (!defaultBranch) return "--default-branch is required without --dry-run.";
+  if (defaultBranch === BOT_BRANCH) return `--default-branch cannot be the bot branch ${BOT_BRANCH}.`;
+  if (gitRef !== `refs/heads/${defaultBranch}`) {
+    return `Checked out ${gitRef ?? "an unknown ref"}, not refs/heads/${defaultBranch}. Run without --dry-run only from the default branch.`;
+  }
+  return null;
+}
+
 export interface SyncArgs {
   report: Report;
   changes: FileChange[];

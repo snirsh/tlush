@@ -5,7 +5,7 @@ import { TAX_YEAR_SPECS } from "../../src/lib/tax/years";
 import { BTL_URL, parseBtl, type BtlResult } from "./btl";
 import { buildReport, changesFor, yearsToCheck, type Report, type YearInput } from "./compare";
 import { excerpt, type Problem, type SourceId } from "./fields";
-import { sync } from "./github";
+import { checkoutRefusal, sync } from "./github";
 import { bookletUrl, classifyBooklet, parseBooklet, type BookletResult } from "./ita";
 import { hasCommand, run } from "./proc";
 import { renderText, type FileChange } from "./render";
@@ -21,7 +21,9 @@ const USAGE = `Usage: bun scripts/rate-check/index.ts --dry-run [--year 2026] [-
   --year N    Check only tax year N.
   --json      Print the report as JSON.
   --source    Check only one source (ita: the ITA booklet, needs pdftotext; btl: the BTL page).
-  --base B    (workflow only) Base branch for the bot PR.`;
+  --default-branch B
+              (workflow only) The repository's default branch. The bot PR targets it, and a run
+              without --dry-run is refused unless GITHUB_REF is refs/heads/B.`;
 
 interface HttpResult {
   status: number;
@@ -122,7 +124,7 @@ async function main(): Promise<number> {
       json: { type: "boolean", default: false },
       year: { type: "string" },
       source: { type: "string" },
-      base: { type: "string", default: "master" },
+      "default-branch": { type: "string" },
       help: { type: "boolean", default: false },
     },
   });
@@ -142,6 +144,12 @@ async function main(): Promise<number> {
   }
   if (!dryRun && source !== "all") {
     console.error("--source is only allowed with --dry-run, so a partial check never opens a PR or an issue.");
+    return 2;
+  }
+  const defaultBranch = values["default-branch"];
+  const refusal = dryRun ? null : checkoutRefusal(process.env.GITHUB_REF, defaultBranch);
+  if (refusal) {
+    console.error(refusal);
     return 2;
   }
   const withIta = source !== "btl";
@@ -181,7 +189,7 @@ async function main(): Promise<number> {
   const runUrl = `${server}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## Rate check\n\n\`\`\`text\n${text}\n\`\`\`\n`);
   console.log(text);
-  await sync({ report, changes, notes, btl: btl === "skipped" ? {} : btl.page, base: values.base!, runUrl });
+  await sync({ report, changes, notes, btl: btl === "skipped" ? {} : btl.page, base: defaultBranch!, runUrl });
   return 0;
 }
 
