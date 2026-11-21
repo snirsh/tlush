@@ -19,9 +19,15 @@ export const TAX_YEAR_2025: TaxYearSpec = {
   nationalInsurance: {
     // Source: BTL employer circular 1515 (rates from February 2025)
     // https://www.btl.gov.il/Insurance/HozrimBituah/Hozrim/%D7%A9%D7%99%D7%A0%D7%95%D7%99%20%D7%91%D7%AA%D7%A9%D7%9C%D7%95%D7%9D%20%D7%93%D7%9E%D7%99%20%D7%91%D7%99%D7%98%D7%95%D7%97%20%D7%9C%D7%90%D7%95%D7%9E%D7%99%20%D7%95%D7%93%D7%9E%D7%99%20%D7%91%D7%99%D7%98%D7%95%D7%97%20%D7%91%D7%A8%D7%99%D7%90%D7%95%D7%AA%20%D7%9C%D7%A9%D7%A0%D7%AA%202025%20%D7%94%D7%97%D7%9C%20%D7%9E%D7%97%D7%95%D7%93%D7%A9%20%D7%A4%D7%91%D7%A8%D7%95%D7%90%D7%A8%202025.pdf
+    //
+    // Mid-year change. In January 2025 the full health rate was 5.16% (total
+    // 12.16%). From 1 February 2025 it is 5.17% (total 12.17%). The reduced
+    // health rate of 3.23% applies from 1 January. tlush annualises, so 2025
+    // uses the February to December rate. The overstatement is at most 0.01% of
+    // one month's income, under ₪1 per ₪100,000 of annual income.
     reducedThresholdMonthly: 7_522,
-    reducedRate: 0.035,
-    fullRate: 0.12,
+    reducedRate: 0.0427, // 1.04% NI + 3.23% health
+    fullRate: 0.1217, // 7% NI + 5.17% health
     ceilingMonthly: 50_695,
   },
   surtax: {
