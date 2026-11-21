@@ -80,7 +80,8 @@ export function GlobalInputs({
         >
           <div className="inline">
             <Toggle
-              label=""
+              label="Set exchange rate"
+              hideLabel
               checked={settings.fxOverride !== null}
               onChange={(on) => set("fxOverride", on ? Number(fxLive.toFixed(4)) : null)}
             />
