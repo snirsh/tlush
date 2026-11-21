@@ -3,6 +3,7 @@ name: Rate check
 # Monthly check of src/lib/tax/years/ against the ITA booklet and the BTL
 # employee-rates page. Opens or updates one PR on bot/rate-update when figures
 # change, and one issue labelled rate-checker when a source cannot be read.
+# On a pull request it only runs a strict dry run against the live pages.
 on:
   schedule:
     - cron: '17 6 3 * *'
@@ -12,18 +13,25 @@ on:
         description: Print the report only. No branch, PR or issue.
         type: boolean
         default: false
+  pull_request:
+    paths:
+      - scripts/rate-check/**
+      - .github/workflows/rate-check.yml
+      - src/lib/tax/years/**
 
 permissions:
-  contents: write
-  pull-requests: write
-  issues: write
-
-concurrency: rate-check
+  contents: read
 
 jobs:
   check:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    concurrency: rate-check
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -42,3 +50,23 @@ jobs:
             default_branch=$(gh repo view "$GITHUB_REPOSITORY" --json defaultBranchRef -q .defaultBranchRef.name)
             bun scripts/rate-check/index.ts --default-branch "$default_branch"
           fi
+
+  dry-run:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    concurrency:
+      group: rate-check-dry-run-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+      - run: bun install --frozen-lockfile
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends poppler-utils
+      - run: pdftotext -v 2>&1 || true
+      - name: Strict dry run against the live pages
+        run: bun scripts/rate-check/index.ts --dry-run --strict
