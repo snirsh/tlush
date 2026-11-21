@@ -1,4 +1,5 @@
 import { appendFileSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { TAX_YEAR_SPECS } from "../../src/lib/tax/years";
 import { BTL_URL, parseBtl, type BtlResult } from "./btl";
@@ -114,6 +115,7 @@ function fileChanges(report: Report, btl: BtlResult | "skipped"): { changes: Fil
 }
 
 async function main(): Promise<number> {
+  process.chdir(fileURLToPath(new URL("../..", import.meta.url)));
   const { values } = parseArgs({
     options: {
       "dry-run": { type: "boolean", default: false },
