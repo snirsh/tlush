@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { btlForYear, parseBtl } from "../btl";
-import { classifyBooklet, parseBooklet } from "../ita";
+import { classifyBooklet, parseBooklet, stripBidi } from "../ita";
 
 const fixture = (name: string) => readFileSync(new URL(`../__fixtures__/${name}`, import.meta.url), "utf8");
 
@@ -46,6 +46,18 @@ describe("ITA booklet parser", () => {
     expect(problems).toHaveLength(1);
     expect(problems[0]).toMatchObject({ source: "ita", year: 2026, kind: "missing" });
     expect(problems[0].excerpt).toBeTruthy();
+  });
+
+  it.each([
+    ["a misread annual digit", (t: string) => t.replace("20%    228,000", "20%    229,000")],
+    ["swapped annual and monthly columns", (t: string) => t.replace(/^ 10%\s+84,120\s+עד-\s+10%\s+7,010\s+עד-$/m, " 10%     7,010   עד-     10%    84,120   עד-")],
+  ])("refuses the bracket table on %s", (_case, corrupt) => {
+    const original = stripBidi(fixture("ita-2026-booklet.txt"));
+    const text = corrupt(original);
+    expect(text).not.toBe(original);
+    const { fields, problems } = parseBooklet(text, 2026);
+    expect(fields.brackets).toBeUndefined();
+    expect(problems).toMatchObject([{ kind: "mismatch", message: expect.stringContaining("12 × the monthly bound") }]);
   });
 
   it("reports two different surtax thresholds as ambiguous", () => {
