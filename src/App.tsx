@@ -89,7 +89,7 @@ export function App() {
               type="button"
               role="tab"
               id={`tab-${t.id}`}
-              aria-controls={`panel-${t.id}`}
+              aria-controls={tab === t.id ? `panel-${t.id}` : undefined}
               aria-selected={tab === t.id}
               tabIndex={tab === t.id ? 0 : -1}
               className={tab === t.id ? "active" : ""}

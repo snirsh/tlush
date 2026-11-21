@@ -79,6 +79,14 @@ describe("market lookups", () => {
   });
 });
 
+/** Every aria-controls in the page must name an element that is in the DOM. */
+function expectControlsResolve() {
+  const dangling = [...document.querySelectorAll("[aria-controls]")]
+    .map((el) => el.getAttribute("aria-controls")!)
+    .filter((id) => !document.getElementById(id));
+  expect(dangling).toEqual([]);
+}
+
 describe("tabs", () => {
   it("links each tab to the panel it shows, with one tab stop", () => {
     render(<App />);
@@ -90,7 +98,10 @@ describe("tabs", () => {
     expect(explanation).toHaveAttribute("tabindex", "-1");
     const panel = screen.getByRole("tabpanel", { name: "RSU" });
     expect(rsu).toHaveAttribute("aria-controls", panel.id);
+    expect(espp).not.toHaveAttribute("aria-controls");
+    expect(explanation).not.toHaveAttribute("aria-controls");
     expect(panel).toHaveAttribute("tabindex", "0");
+    expectControlsResolve();
   });
 
   it("moves focus and selection with arrows (wrapping), Home and End", async () => {
@@ -100,7 +111,8 @@ describe("tabs", () => {
     const expectActive = (name: string) => {
       expect(tab(name)).toHaveFocus();
       expect(tab(name)).toHaveAttribute("aria-selected", "true");
-      expect(screen.getByRole("tabpanel", { name })).toBeInTheDocument();
+      expect(tab(name)).toHaveAttribute("aria-controls", screen.getByRole("tabpanel", { name }).id);
+      expectControlsResolve();
     };
 
     tab("RSU").focus();
@@ -211,16 +223,21 @@ describe("result rows", () => {
     const user = await rsuWithPrice();
     const gross = screen.getByRole("button", { name: "Gross" });
     expect(gross).toHaveAttribute("aria-expanded", "false");
+    expect(gross).not.toHaveAttribute("aria-controls");
     expect(screen.queryByText("Foreign fee")).toBeNull();
+    expectControlsResolve();
 
     await user.click(gross);
     expect(gross).toHaveAttribute("aria-expanded", "true");
     const detail = document.getElementById(gross.getAttribute("aria-controls")!);
     expect(detail).toContainElement(screen.getByText("Foreign fee"));
+    expectControlsResolve();
 
     await user.keyboard("{Enter}");
     expect(gross).toHaveAttribute("aria-expanded", "false");
+    expect(gross).not.toHaveAttribute("aria-controls");
     expect(screen.queryByText("Foreign fee")).toBeNull();
+    expectControlsResolve();
   });
 });
 

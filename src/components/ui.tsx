@@ -240,7 +240,7 @@ export function ResultRow({
               type="button"
               className="result-toggle"
               aria-expanded={open}
-              aria-controls={detailId}
+              aria-controls={open ? detailId : undefined}
               aria-describedby={help ? tipId : undefined}
             >
               <span className="caret" aria-hidden="true">{open ? "▾" : "▸"}</span>
