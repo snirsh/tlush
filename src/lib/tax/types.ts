@@ -40,7 +40,10 @@ export interface IncomeTaxBracket {
  * year lives in `years/`, and the engine reads only from these specs.
  *
  * Rates are annualised. When a rate changes mid-year, the spec carries the rate
- * in force for most of the year and its file documents the change (see 2025).
+ * in force for most of the year and its file documents the change. In 2025 the
+ * full health rate rose from 5.16% to 5.17% on 1 February, so 2025 uses 12.17%.
+ * That overstates by at most 0.01% of one month's income, under ₪1 per ₪100,000
+ * of annual income.
  *
  * Reserved future siblings, not modelled yet: creditPoints, pension, hishtalmut.
  */

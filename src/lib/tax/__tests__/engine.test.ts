@@ -9,7 +9,7 @@ const yc = yearConstants(2025);
 describe("bituah", () => {
   it("charges the full rate above the reduced threshold, below the ceiling", () => {
     // A monthly slice fully inside the full-rate tier.
-    expect(bituahOnMonthlySlice(20_000, 5_000, yc)).toBeCloseTo(5_000 * 0.12, 4);
+    expect(bituahOnMonthlySlice(20_000, 5_000, yc)).toBeCloseTo(5_000 * 0.1217, 4);
   });
 
   it("stops at the monthly ceiling", () => {
@@ -19,12 +19,12 @@ describe("bituah", () => {
 
   it("spreads annual income across 12 months", () => {
     // 120k spread = 10k/month on top of a 20k salary → all full rate.
-    expect(bituahOnExtra(20_000, 120_000, yc)).toBeCloseTo(120_000 * 0.12, 2);
+    expect(bituahOnExtra(20_000, 120_000, yc)).toBeCloseTo(120_000 * 0.1217, 2);
   });
 
   it("applies the reduced rate at low salary", () => {
     // Salary 0, 1,000/month slice sits entirely in the reduced tier.
-    expect(bituahOnMonthlySlice(0, 1_000, yc)).toBeCloseTo(1_000 * 0.035, 4);
+    expect(bituahOnMonthlySlice(0, 1_000, yc)).toBeCloseTo(1_000 * 0.0427, 4);
   });
 });
 
