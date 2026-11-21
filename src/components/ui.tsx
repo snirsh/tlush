@@ -71,32 +71,55 @@ export function Info({ id, text }: { id: string; text: string }) {
 }
 
 /** Ties the control inside a Field to its label and help text. */
-const FieldContext = createContext<{ id: string; describedBy?: string } | null>(null);
+interface FieldInfo {
+  /** The id the visible label's htmlFor points at. */
+  id: string;
+  labelId: string;
+  describedBy?: string;
+  /** "toggle": the label clicks a Toggle in the field; other controls are labelledby. */
+  labelTarget?: "toggle";
+}
 
-export function useFieldControl():{ id?: string; "aria-describedby"?: string } {
+const FieldContext = createContext<FieldInfo | null>(null);
+
+export function useFieldControl(): {
+  id?: string;
+  "aria-labelledby"?: string;
+  "aria-describedby"?: string;
+} {
   const field = useContext(FieldContext);
-  return field ? { id: field.id, "aria-describedby": field.describedBy } : {};
+  if (!field) return {};
+  return field.labelTarget === "toggle"
+    ? { "aria-labelledby": field.labelId, "aria-describedby": field.describedBy }
+    : { id: field.id, "aria-describedby": field.describedBy };
 }
 
 /** A labelled form row with optional help text. */
 export function Field({
   label,
   help,
+  labelTarget,
   children,
 }: {
   label: string;
   help?: string;
+  labelTarget?: "toggle";
   children: ReactNode;
 }) {
   const id = useId();
+  const labelId = useId();
   const tipId = useId();
   return (
     <div className="field">
       <span className="field-label">
-        <label htmlFor={id}>{label}</label>
+        <label id={labelId} htmlFor={id}>
+          {label}
+        </label>
         {help ? <Info id={tipId} text={help} /> : null}
       </span>
-      <FieldContext.Provider value={{ id, describedBy: help ? tipId : undefined }}>
+      <FieldContext.Provider
+        value={{ id, labelId, describedBy: help ? tipId : undefined, labelTarget }}
+      >
         {children}
       </FieldContext.Provider>
     </div>
@@ -113,24 +136,25 @@ export function DateInput(props: Omit<InputHTMLAttributes<HTMLInputElement>, "ty
   return <input type="date" {...control} {...props} />;
 }
 
-/** A labelled checkbox toggle. */
+/**
+ * A labelled checkbox toggle. Inside a `Field labelTarget="toggle"` it takes the
+ * field's label instead of its own, so `label` is omitted there.
+ */
 export function Toggle({
   label,
-  hideLabel,
   help,
   checked,
   onChange,
 }: {
-  label: string;
-  /** Keep the label for assistive tech only, when the context already shows it. */
-  hideLabel?: boolean;
+  label?: string;
   help?: string;
   checked: boolean;
   onChange: (v: boolean) => void;
 }) {
-  const id = useId();
+  const ownId = useId();
   const tipId = useId();
   const field = useContext(FieldContext);
+  const id = field?.labelTarget === "toggle" ? field.id : ownId;
   return (
     <div className="toggle">
       <input
@@ -141,9 +165,7 @@ export function Toggle({
         onChange={(e) => onChange(e.target.checked)}
       />
       <span className="toggle-label">
-        <label htmlFor={id}>
-          {hideLabel ? <span className="visually-hidden">{label}</span> : label}
-        </label>
+        {label ? <label htmlFor={id}>{label}</label> : null}
         {help ? <Info id={tipId} text={help} /> : null}
       </span>
     </div>
