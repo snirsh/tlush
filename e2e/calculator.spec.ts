@@ -20,10 +20,11 @@ test("RSU: manual price produces after-tax results", async ({ page }) => {
   await page.getByRole("checkbox", { name: /set stock price/i }).check();
   await page.getByLabel("Stock price (USD)").fill("200");
 
-  await expect(page.getByText("Average tax deduction")).toBeVisible();
-  await expect(page.getByText("Marginal tax")).toBeVisible();
-  await expect(page.getByText("Total net")).toBeVisible();
-  await expect(page.getByText(/Monthly miluim pay/i)).toBeVisible();
+  // Help tooltips are real (hidden) DOM text, so match row labels exactly.
+  await expect(page.getByText("Average tax deduction", { exact: true })).toBeVisible();
+  await expect(page.getByText("Marginal tax", { exact: true })).toBeVisible();
+  await expect(page.getByText("Total net", { exact: true })).toBeVisible();
+  await expect(page.getByText("Monthly miluim pay (gross)", { exact: true })).toBeVisible();
   // Some shekel amount appears in the results.
   await expect(page.getByText(/₪[\d,]+\.\d{2}/).first()).toBeVisible();
 });
@@ -34,12 +35,12 @@ test("ESPP: trustee toggle switches the result rows", async ({ page }) => {
   await page.getByRole("checkbox", { name: /set stock price/i }).check();
   await page.getByLabel("Stock price (USD)").fill("80");
 
-  await expect(page.getByText("Gross investment")).toBeVisible();
-  await expect(page.getByText("Capital tax")).toBeVisible();
+  await expect(page.getByText("Gross investment", { exact: true })).toBeVisible();
+  await expect(page.getByText("Capital tax", { exact: true })).toBeVisible();
 
   // Turning off the trustee reveals the "tax withheld at purchase" row.
   await page.getByRole("checkbox", { name: /With Trustee/i }).uncheck();
-  await expect(page.getByText(/Tax on discount/i)).toBeVisible();
+  await expect(page.getByText("Tax on discount (paid)", { exact: true })).toBeVisible();
 });
 
 test("Explanation tab documents the fields", async ({ page }) => {

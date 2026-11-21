@@ -18,7 +18,10 @@ Key product rules:
   or any backend that receives user figures.
 - Market data (stock price, USD/ILS rate, grant-date average) is fetched
   best-effort from free, key-less public APIs, and **every value has a manual
-  override** so the app is fully usable offline.
+  override** so the app is fully usable offline. Nothing is fetched on page
+  load: the FX rate waits for the first user interaction
+  (`src/lib/firstInteraction.ts`), quotes and search wait for a typed symbol.
+- Fonts are self-hosted (`src/assets/fonts/`); no third-party request on load.
 
 ## Layout
 
@@ -36,8 +39,12 @@ src/lib/tax/        Pure tax engine (no React). The heart of the project.
   sellingTips.ts    Miluim / maternity monthly pay.
   __tests__/        Vitest unit tests, incl. first-principles worked examples.
 src/lib/market/     FX, quotes, symbol search (best-effort, fail-soft).
+src/lib/firstInteraction.ts  Defers network lookups to the first user input.
 src/components/     React UI. Pure presentation over the engine.
+src/assets/fonts/   Self-hosted Manrope + IBM Plex Mono (OFL, see LICENSE.md).
+                    vite.config.ts preloads the two above-the-fold files.
 public/tickers.json Offline symbol-autocomplete fallback list.
+e2e/                Playwright smoke tests + the axe gate (a11y.spec.ts).
 ```
 
 ## Conventions
@@ -76,7 +83,9 @@ runner, which is not Vitest. The suite is Vitest and must run via the script.
 Test layers: pure-engine unit tests + first-principles worked examples (`src/lib/tax/__tests__`),
 jsdom UI-interaction tests that drive the real React app offline
 (`src/__tests__/app.dom.test.tsx`), and Playwright e2e smoke tests in a real
-browser (`e2e/`, run by the `e2e` CI job). Browser downloads may be blocked in
+browser (`e2e/`, run by the `e2e` CI job). The `e2e` job also runs the axe
+gate, which fails on any serious or critical violation on any tab at 1440 and
+390 px wide. Browser downloads may be blocked in
 sandboxes — the jsdom layer covers UI verification when they are.
 
 ## Deployment

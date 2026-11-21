@@ -11,7 +11,7 @@ import { ils, money, num, pct, signTone, todayIso } from "../lib/format";
 import type { Settings } from "./GlobalInputs";
 import { SymbolInput } from "./SymbolInput";
 import { EMPTY_FEES, FeeEditor, resolveFees, type FeeOverrides } from "./FeeEditor";
-import { AnimatedValue, EmptyResults, Field, NumberInput, ResultRow, Toggle } from "./ui";
+import { AnimatedValue, DateInput, EmptyResults, Field, NumberInput, ResultRow, Toggle } from "./ui";
 import { BreakdownBar, type Segment } from "./Breakdown";
 
 /** How the purchase discount is entered: a percentage off, or the exact price paid. */
@@ -163,7 +163,7 @@ export function EsppCalculator({
           </Field>
           {plan.withTrustee ? (
             <Field label="Plan end date" help="Last day of the ESPP plan — starts the 2-year capital-gains clock.">
-              <input type="date" value={plan.planEndDate} max={todayIso()} onChange={(e) => update({ planEndDate: e.target.value })} />
+              <DateInput value={plan.planEndDate} max={todayIso()} onChange={(e) => update({ planEndDate: e.target.value })} />
             </Field>
           ) : null}
         </div>
