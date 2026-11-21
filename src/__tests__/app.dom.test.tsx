@@ -54,6 +54,39 @@ describe("RSU calculator UI", () => {
   });
 });
 
+describe("result rows", () => {
+  async function rsuWithPrice() {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole("checkbox", { name: /set stock price/i }));
+    await user.type(screen.getByLabelText("Stock price (USD)"), "200");
+    await screen.findByText("Total net");
+    return user;
+  }
+
+  it("does not expose plain rows as buttons", async () => {
+    await rsuWithPrice();
+    expect(screen.queryByRole("button", { name: /Total net/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Average tax deduction/ })).toBeNull();
+  });
+
+  it("expands a detail row through a button that controls the revealed region", async () => {
+    const user = await rsuWithPrice();
+    const gross = screen.getByRole("button", { name: "Gross" });
+    expect(gross).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("Foreign fee")).toBeNull();
+
+    await user.click(gross);
+    expect(gross).toHaveAttribute("aria-expanded", "true");
+    const detail = document.getElementById(gross.getAttribute("aria-controls")!);
+    expect(detail).toContainElement(screen.getByText("Foreign fee"));
+
+    await user.keyboard("{Enter}");
+    expect(gross).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("Foreign fee")).toBeNull();
+  });
+});
+
 describe("ESPP calculator UI", () => {
   it("computes gross investment exactly from the defaults", async () => {
     const user = userEvent.setup();

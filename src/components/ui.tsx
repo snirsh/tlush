@@ -112,23 +112,36 @@ export function ResultRow({
   children?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const detailId = useId();
   const expandable = Boolean(children);
   return (
     <div className={`result-row${expandable ? " expandable" : ""}${emphasis ? " emph" : ""}`}>
-      <button
-        type="button"
-        className="result-head"
-        onClick={() => expandable && setOpen((o) => !o)}
-        aria-expanded={expandable ? open : undefined}
-      >
+      {/* The head owns the click so the whole row stays a mouse target; the
+          button inside is the keyboard and screen-reader control. */}
+      <div className="result-head" onClick={expandable ? () => setOpen((o) => !o) : undefined}>
         <span className="result-label">
-          {expandable ? <span className="caret">{open ? "▾" : "▸"}</span> : null}
-          {label}
+          {expandable ? (
+            <button
+              type="button"
+              className="result-toggle"
+              aria-expanded={open}
+              aria-controls={detailId}
+            >
+              <span className="caret" aria-hidden="true">{open ? "▾" : "▸"}</span>
+              {label}
+            </button>
+          ) : (
+            label
+          )}
           {help ? <Info text={help} /> : null}
         </span>
         <span className={`result-value${tone ? ` ${tone}` : ""}`}>{value}</span>
-      </button>
-      {expandable && open ? <div className="result-detail">{children}</div> : null}
+      </div>
+      {expandable && open ? (
+        <div className="result-detail" id={detailId}>
+          {children}
+        </div>
+      ) : null}
     </div>
   );
 }
