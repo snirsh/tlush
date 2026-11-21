@@ -20,6 +20,7 @@
   --line: #212429;        /* hairlines */
   --line-2: #2c3036;      /* stronger hairlines */
   --ring: rgba(243, 244, 246, 0.16);
+  --focus: var(--ink-2);  /* keyboard focus outlines; >= 3:1 on every surface */
 
   /* Semantic sign colours — restrained so they read as meaning, not decoration */
   --gain: #5fb88a;        /* a gain, credit or refund (+) */
@@ -154,7 +155,7 @@ body {
   border-bottom-color: var(--ink);
 }
 .tabs button:focus-visible {
-  outline: 2px solid var(--ring);
+  outline: 2px solid var(--focus);
   outline-offset: 1px;
   color: var(--ink);
   border-radius: 1px;
@@ -249,7 +250,7 @@ input:focus, select:focus {
 }
 .seg-switch button:hover { color: var(--ink-2); }
 .seg-switch button.active { background: var(--surface-3); color: var(--ink); }
-.seg-switch button:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+.seg-switch button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 
 /* Small derived-value hint beneath a field */
 .field-hint {
@@ -293,7 +294,8 @@ input:focus, select:focus {
   letter-spacing: inherit;
   cursor: help;
 }
-.info-wrap:hover > .info, .info:focus-visible { border-color: var(--ink-2); color: var(--ink-2); outline: none; }
+.info-wrap:hover > .info, .info:focus-visible { border-color: var(--ink-2); color: var(--ink-2); }
+.info:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 .info-tip {
   display: none;
   position: absolute;
@@ -487,6 +489,8 @@ input:focus, select:focus {
   text-align: inherit;
   cursor: pointer;
 }
+.result-toggle:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 2px; }
+[role="tabpanel"]:focus-visible { outline: 2px solid var(--focus); outline-offset: 4px; border-radius: var(--r-sm); }
 .result-row.expandable:hover .result-label { color: var(--ink-2); }
 .result-label {
   display: inline-flex;
