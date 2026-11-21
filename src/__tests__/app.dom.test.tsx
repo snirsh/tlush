@@ -58,6 +58,27 @@ describe("RSU calculator UI", () => {
   });
 });
 
+describe("market lookups", () => {
+  it("sends no request until the user first interacts, then fetches the live FX rate", async () => {
+    const fetchMock = vi.fn(async (url: string) =>
+      url.startsWith("https://api.frankfurter.app/latest")
+        ? new Response(JSON.stringify({ rates: { ILS: 3.5 } }))
+        : Promise.reject(new Error("offline in test")),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    render(<App />);
+
+    await new Promise((r) => setTimeout(r, 50));
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.getByText("fallback: 3.7000")).toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("heading", { name: "Tlush" }));
+    expect(await screen.findByText("live: 3.5000")).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("tabs", () => {
   it("links each tab to the panel it shows, with one tab stop", () => {
     render(<App />);
