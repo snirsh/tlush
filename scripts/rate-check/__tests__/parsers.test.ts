@@ -39,6 +39,13 @@ describe("ITA booklet parser", () => {
     expect(problems).toMatchObject([{ source: "ita", year: 2025, kind: "mismatch" }]);
   });
 
+  it("reads nothing from a booklet without a year heading", () => {
+    const text = stripBidi(fixture("ita-2026-booklet.txt")).replace(/להלן שיעורי המס לשנת/g, "");
+    const { fields, problems } = parseBooklet(text, 2026);
+    expect(fields).toEqual({});
+    expect(problems).toMatchObject([{ source: "ita", year: 2026, kind: "missing", message: expect.stringContaining("Year heading") }]);
+  });
+
   it("reports a missing bracket table and never reads the next table's rows instead", () => {
     const { fields, problems } = parseBooklet(fixture("ita-2026-no-brackets.txt"), 2026);
     expect(fields.brackets).toBeUndefined();

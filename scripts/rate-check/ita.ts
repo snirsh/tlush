@@ -65,7 +65,9 @@ export function parseBooklet(rawText: string, year: number): BookletResult {
   const heading = YEAR_HEADING.exec(text);
   if (!heading) {
     fail("missing", 'Year heading "להלן שיעורי המס לשנת <year>" not found');
-  } else if (Number(heading[1]) !== year) {
+    return { fields, problems };
+  }
+  if (Number(heading[1]) !== year) {
     fail("mismatch", `Booklet heading says ${heading[1]}, expected ${year}`, heading.index);
     return { fields, problems };
   }
