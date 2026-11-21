@@ -5,7 +5,7 @@ export function annualIncomeTax(annualIncome: number, yc: YearConstants): number
   if (annualIncome <= 0) return 0;
   let tax = 0;
   let lower = 0;
-  for (const bracket of yc.brackets) {
+  for (const bracket of yc.incomeTax.brackets) {
     if (annualIncome <= lower) break;
     const taxableInBracket = Math.min(annualIncome, bracket.upTo) - lower;
     tax += taxableInBracket * bracket.rate;
@@ -34,8 +34,8 @@ export function marginalIncomeTax(
 
 /** The top marginal rate that applies at a given annual income level. */
 export function marginalRateAt(annualIncome: number, yc: YearConstants): number {
-  for (const bracket of yc.brackets) {
+  for (const bracket of yc.incomeTax.brackets) {
     if (annualIncome <= bracket.upTo) return bracket.rate;
   }
-  return yc.brackets[yc.brackets.length - 1].rate;
+  return yc.incomeTax.brackets[yc.incomeTax.brackets.length - 1].rate;
 }

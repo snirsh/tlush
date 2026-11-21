@@ -13,7 +13,7 @@ describe("bituah", () => {
   });
 
   it("stops at the monthly ceiling", () => {
-    const slice = bituahOnMonthlySlice(yc.bituah.ceilingMonthly, 10_000, yc);
+    const slice = bituahOnMonthlySlice(yc.nationalInsurance.ceilingMonthly, 10_000, yc);
     expect(slice).toBe(0);
   });
 
