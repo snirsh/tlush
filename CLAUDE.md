@@ -81,6 +81,8 @@ bun run typecheck
 bun run build        # tsc + vite build → dist/
 bun scripts/rate-check/index.ts --dry-run   # live official-rate check, no writes
                                             # (needs pdftotext; --source btl skips it)
+                                            # --strict: exit 1 unless this year is fully ok
+                                            # (the PR job runs --dry-run --strict)
 ```
 
 Always use `bun run test`, never `bun test` — the latter invokes bun's own test
