@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 import { App } from "../App";
@@ -387,6 +387,66 @@ describe("results jump (phone summary)", () => {
     // it needs real :focus-visible; e2e covers it.)
     await user.click(screen.getByRole("heading", { name: "Tlush" }));
     expect(jump()).not.toHaveAttribute("data-hidden");
+  });
+
+  it("comes back only once a press that left a field is released", async () => {
+    // Otherwise it would appear under the pointer and take the release.
+    const report = stubObserver();
+    const user = userEvent.setup();
+    render(<App />);
+    await enterPrice(user, "200");
+    report(false);
+    const heading = screen.getByRole("heading", { name: "Tlush" });
+
+    await user.pointer({ keys: "[MouseLeft>]", target: heading });
+    expect(document.body).toHaveFocus();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(jump()).toHaveAttribute("data-hidden");
+
+    await user.pointer({ keys: "[/MouseLeft]", target: heading });
+    await waitFor(() => expect(jump()).not.toHaveAttribute("data-hidden"));
+  });
+
+  it.each(["pointerCancel", "dragEnd", "contextMenu", "keyDown"] as const)(
+    "comes back when a press ends without a mouseup (%s)",
+    async (end) => {
+      const report = stubObserver();
+      const user = userEvent.setup();
+      render(<App />);
+      await enterPrice(user, "200");
+      report(false);
+      const heading = screen.getByRole("heading", { name: "Tlush" });
+
+      await user.pointer({ keys: "[MouseLeft>]", target: heading });
+      expect(document.body).toHaveFocus();
+      expect(jump()).toHaveAttribute("data-hidden");
+      fireEvent[end](heading);
+      await waitFor(() => expect(jump()).not.toHaveAttribute("data-hidden"));
+    },
+  );
+
+  it.each([
+    ["the window loses focus", () => fireEvent.blur(window)],
+    [
+      "the page is hidden",
+      () => {
+        const hidden = vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+        fireEvent(document, new Event("visibilitychange"));
+        hidden.mockRestore();
+      },
+    ],
+  ])("comes back when %s mid-press", async (_, leave) => {
+    const report = stubObserver();
+    const user = userEvent.setup();
+    render(<App />);
+    await enterPrice(user, "200");
+    report(false);
+    const heading = screen.getByRole("heading", { name: "Tlush" });
+
+    await user.pointer({ keys: "[MouseLeft>]", target: heading });
+    expect(jump()).toHaveAttribute("data-hidden");
+    leave();
+    await waitFor(() => expect(jump()).not.toHaveAttribute("data-hidden"));
   });
 
   it("hides while the results are on screen", async () => {

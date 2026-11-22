@@ -1,4 +1,4 @@
-import { useEffect, useState, type MouseEvent } from "react";
+import { useEffect, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { usePrefersReducedMotion } from "./ui";
 
 /** Id of each calculator's results column: the jump target. One tab renders at a time. */
@@ -49,13 +49,51 @@ function useEditing(): boolean {
   // whatever already has focus.
   const [editing, setEditing] = useState(() => isEditing(document.activeElement));
   useEffect(() => {
-    const onIn = (e: FocusEvent) => setEditing(isEditing(e.target));
-    const onOut = (e: FocusEvent) => setEditing(isEditing(e.relatedTarget));
+    // A press moves focus on mousedown (a tap's emulated one included, which
+    // comes after the finger lifts). Showing the bar then would put it under
+    // the release and steal the click, so focus changes during a press apply
+    // only once its click has been dispatched.
+    let latest = isEditing(document.activeElement);
+    let held = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const change = (value: boolean) => {
+      latest = value;
+      if (!held && timer === undefined) setEditing(value);
+    };
+    const onIn = (e: FocusEvent) => change(isEditing(e.target));
+    const onOut = (e: FocusEvent) => change(isEditing(e.relatedTarget));
+    const onDown = (e: MouseEvent) => {
+      if (e.button === 0) held = true;
+    };
+    const onRelease = () => {
+      if (!held) return;
+      held = false;
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        timer = undefined;
+        setEditing(latest);
+      });
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") onRelease();
+    };
+    // Any of these ends a press, and so does leaving the window or the tab,
+    // so a lost mouseup cannot hold the bar back.
+    const releases = ["mouseup", "pointercancel", "dragend", "contextmenu", "keydown"] as const;
     document.addEventListener("focusin", onIn);
     document.addEventListener("focusout", onOut);
+    document.addEventListener("mousedown", onDown, true);
+    for (const type of releases) document.addEventListener(type, onRelease, true);
+    window.addEventListener("blur", onRelease);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       document.removeEventListener("focusin", onIn);
       document.removeEventListener("focusout", onOut);
+      document.removeEventListener("mousedown", onDown, true);
+      for (const type of releases) document.removeEventListener(type, onRelease, true);
+      window.removeEventListener("blur", onRelease);
+      document.removeEventListener("visibilitychange", onVisibility);
+      clearTimeout(timer);
     };
   }, []);
   return editing;
@@ -78,7 +116,7 @@ export function ResultsJump({ label, value }: { label: string; value: string }) 
   // leave the URL alone on purpose. Inputs are never persisted, so a #results
   // kept in the URL would reopen (on reload or share) scrolled past the form
   // onto an empty-results placeholder.
-  const jump = (e: MouseEvent<HTMLAnchorElement>) => {
+  const jump = (e: ReactMouseEvent<HTMLAnchorElement>) => {
     const target = document.getElementById(RESULTS_ID);
     if (!target) return;
     e.preventDefault();
