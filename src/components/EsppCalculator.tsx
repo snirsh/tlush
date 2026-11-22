@@ -1,4 +1,4 @@
-import { useEffect, useMemo, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { useMemo, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import {
   computeEspp,
   monthlyMaternityPay,
@@ -6,7 +6,7 @@ import {
   type EsppResult,
   type TaxProfile,
 } from "../lib/tax";
-import { fetchQuote } from "../lib/market/quote";
+import { fetchQuote, isTaseSymbol, type Quote } from "../lib/market/quote";
 import { ils, money, num, pct, signTone, todayIso } from "../lib/format";
 import type { Settings } from "./GlobalInputs";
 import { SymbolInput } from "./SymbolInput";
@@ -14,6 +14,7 @@ import { EMPTY_FEES, FeeEditor, resolveFees, type FeeOverrides } from "./FeeEdit
 import { AnimatedValue, DateInput, EmptyResults, Field, NumberInput, ResultRow, Toggle } from "./ui";
 import { BreakdownBar, type Segment } from "./Breakdown";
 import { RESULTS_ID, ResultsJump } from "./ResultsJump";
+import { IDLE, liveQuote, lookupFor, NO_PRICE_YET, quoteStatus, useLookup, type Lookup } from "./lookup";
 
 /** How the purchase discount is entered: a percentage off, or the exact price paid. */
 export type DiscountMode = "percent" | "price";
@@ -33,10 +34,7 @@ export interface EsppState {
   fxAtPurchase: number | "";
   whatIf2Years: boolean;
   fees: FeeOverrides;
-  livePrice: number | null;
-  isTase: boolean;
-  currency: string;
-  loading: boolean;
+  quote: Lookup<Quote>;
 }
 
 /** The discounted price implied by the plan's current discount mode. */
@@ -63,10 +61,7 @@ export function newEspp(): EsppState {
     fxAtPurchase: "",
     whatIf2Years: false,
     fees: { ...EMPTY_FEES },
-    livePrice: null,
-    isTase: false,
-    currency: "USD",
-    loading: false,
+    quote: IDLE,
   };
 }
 
@@ -85,21 +80,10 @@ export function EsppCalculator({
 }) {
   const update = (patch: Partial<EsppState>) => setPlan((prev) => ({ ...prev, ...patch }));
 
-  useEffect(() => {
-    const sym = plan.symbol.trim();
-    if (!sym) return;
-    let active = true;
-    update({ loading: true });
-    fetchQuote(sym).then((q) => {
-      if (!active) return;
-      if (q) update({ livePrice: q.price, isTase: q.isTase, currency: q.currency, loading: false });
-      else update({ loading: false });
-    });
-    return () => {
-      active = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [plan.symbol]);
+  // A failed lookup turns the manual price on; turning it back off sticks.
+  useLookup(plan.symbol.trim(), fetchQuote, (quote) =>
+    update(quote.status === "failed" ? { quote, setPrice: true } : { quote }),
+  );
 
   const profile: TaxProfile = {
     monthlySalary: settings.noIncomeYear ? 0 : Number(settings.monthlySalary) || 0,
@@ -108,9 +92,12 @@ export function EsppCalculator({
     noIncomeYear: settings.noIncomeYear,
   };
 
-  const cur = plan.isTase ? "ILS" : "USD";
-  const effPrice = plan.setPrice ? Number(plan.priceOverride) : plan.livePrice ?? 0;
-  const showInUsd = settings.saleInDollars && !plan.isTase;
+  const quote = lookupFor(plan.quote, plan.symbol.trim());
+  const live = liveQuote(quote);
+  const isTase = isTaseSymbol(plan.symbol.trim());
+  const cur = isTase ? "ILS" : "USD";
+  const effPrice = plan.setPrice ? Number(plan.priceOverride) : live?.price ?? 0;
+  const showInUsd = settings.saleInDollars && !isTase;
 
   const result = useMemo<EsppResult | null>(() => {
     const shares = Number(plan.shares) || 0;
@@ -127,7 +114,7 @@ export function EsppCalculator({
         discountedPrice: discounted,
         fxRate: fx,
         fxRateAtPurchase: plan.fxAtPurchase === "" ? undefined : Number(plan.fxAtPurchase),
-        isTase: plan.isTase,
+        isTase,
         whatIf2Years: plan.whatIf2Years,
         fees: resolveFees(plan.fees),
       },
@@ -221,15 +208,14 @@ export function EsppCalculator({
           checked={plan.setPrice}
           onChange={(v) => update({ setPrice: v })}
         />
+        <p className="muted" role="status">
+          {quoteStatus(quote, plan.setPrice)}
+        </p>
         {plan.setPrice ? (
           <Field label={`Stock price (${cur})`}>
             <NumberInput value={plan.priceOverride} onChange={(v) => update({ priceOverride: v })} min={0} step={0.0001} />
           </Field>
-        ) : (
-          <p className="muted">
-            {plan.loading ? "Fetching price…" : effPrice ? `Live price: ${money(effPrice, cur)}` : "Enter a symbol, or turn on “Set stock price”."}
-          </p>
-        )}
+        ) : null}
 
         {plan.withTrustee ? (
           <Toggle
@@ -250,7 +236,7 @@ export function EsppCalculator({
             <EsppResults result={result} cur={cur} effPrice={effPrice} fx={fx} showInUsd={showInUsd} settings={settings} />
           </section>
         ) : (
-          <EmptyResults />
+          <EmptyResults>{quote.status === "failed" ? NO_PRICE_YET : undefined}</EmptyResults>
         )}
       </section>
     </div>

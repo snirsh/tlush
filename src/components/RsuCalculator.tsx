@@ -1,4 +1,4 @@
-import { useEffect, useMemo, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { useMemo, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import {
   combineRsuGrants,
   computeRsuGrant,
@@ -7,7 +7,7 @@ import {
   type RsuGrantResult,
   type TaxProfile,
 } from "../lib/tax";
-import { fetchGrantPrice, fetchQuote } from "../lib/market/quote";
+import { fetchGrantPrice, fetchQuote, isTaseSymbol, type Quote } from "../lib/market/quote";
 import { ils, money, num, pct, signTone, todayIso } from "../lib/format";
 import type { Settings } from "./GlobalInputs";
 import { SymbolInput } from "./SymbolInput";
@@ -20,6 +20,7 @@ import {
 import { AnimatedValue, DateInput, EmptyResults, Field, NumberInput, ResultRow, Toggle } from "./ui";
 import { BreakdownBar } from "./Breakdown";
 import { RESULTS_ID, ResultsJump } from "./ResultsJump";
+import { IDLE, liveQuote, lookupFor, NO_PRICE_YET, quoteStatus, useLookup, type Lookup } from "./lookup";
 
 interface Grant {
   id: string;
@@ -33,12 +34,9 @@ interface Grant {
   previousSalary: number | "";
   whatIf2Years: boolean;
   fees: FeeOverrides;
-  // Market data (fetched).
-  livePrice: number | null;
-  grantPriceLive: number | null;
-  isTase: boolean;
-  currency: string;
-  loading: boolean;
+  quote: Lookup<Quote>;
+  /** The 30-day average before the grant date, from price history. */
+  history: Lookup<number>;
 }
 
 function newGrant(): Grant {
@@ -54,13 +52,32 @@ function newGrant(): Grant {
     previousSalary: "",
     whatIf2Years: false,
     fees: { ...EMPTY_FEES },
-    livePrice: null,
-    grantPriceLive: null,
-    isTase: false,
-    currency: "USD",
-    loading: false,
+    quote: IDLE,
+    history: IDLE,
   };
 }
+
+const isTase = (g: Grant) => isTaseSymbol(g.symbol.trim());
+const quoteOf = (g: Grant) => lookupFor(g.quote, g.symbol.trim());
+const historyOf = (g: Grant) => lookupFor(g.history, historyKey(g));
+
+/** The grant price the split rests on: entered, or fetched. Never the stock price. */
+function grantPriceOf(g: Grant): number | null {
+  if (g.grantPriceOverride !== "") return Number(g.grantPriceOverride);
+  const history = historyOf(g);
+  return history.status === "ok" ? history.value : null;
+}
+
+/** A grant's result, or the first input it still needs. */
+type Outcome =
+  | { kind: "ok"; result: RsuGrantResult; price: number; grantPrice: number }
+  | { kind: "needs"; input: "stock price" | "share count" | "grant price" };
+
+const historyKey = (g: Grant) => (g.symbol.trim() && g.grantDate ? `${g.symbol.trim()}|${g.grantDate}` : "");
+const fetchHistory = (key: string) => {
+  const [symbol, date] = key.split("|");
+  return fetchGrantPrice(symbol, new Date(date));
+};
 
 const MAX_GRANTS = 8;
 
@@ -87,19 +104,18 @@ export function RsuCalculator({
     noIncomeYear: settings.noIncomeYear,
   };
 
-  const allTase = grants.length > 0 && grants.every((g) => g.isTase);
+  const allTase = grants.length > 0 && grants.every(isTase);
   const showInUsd = settings.saleInDollars && !allTase;
 
-  const results = useMemo(
+  const outcomes = useMemo(
     () =>
-      grants.map((g) => {
-        const price = g.setPrice ? Number(g.priceOverride) : g.livePrice ?? 0;
-        const grantPrice =
-          g.grantPriceOverride !== ""
-            ? Number(g.grantPriceOverride)
-            : g.grantPriceLive ?? price;
+      grants.map((g): Outcome => {
+        const price = g.setPrice ? Number(g.priceOverride) : liveQuote(quoteOf(g))?.price ?? 0;
+        const grantPrice = grantPriceOf(g);
         const shares = Number(g.shares) || 0;
-        if (shares <= 0 || price <= 0) return null;
+        if (price <= 0) return { kind: "needs", input: "stock price" };
+        if (shares <= 0) return { kind: "needs", input: "share count" };
+        if (grantPrice === null) return { kind: "needs", input: "grant price" };
         const workplaceSalary =
           g.changedWorkplace || settings.noIncomeYear
             ? Number(g.previousSalary) || 0
@@ -111,26 +127,29 @@ export function RsuCalculator({
             grantPrice,
             grantDate: new Date(g.grantDate),
             fxRate: fx,
-            isTase: g.isTase,
+            isTase: isTase(g),
             whatIf2Years: g.whatIf2Years,
             workplaceMonthlySalary: workplaceSalary,
             fees: resolveFees(g.fees),
           },
           profile,
         );
-        return { ...res, isRefund: g.changedWorkplace } as RsuGrantResult;
+        return { kind: "ok", result: { ...res, isRefund: g.changedWorkplace }, price, grantPrice };
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [grants, settings, fx],
   );
 
-  const valid = results.filter((r): r is RsuGrantResult => r !== null);
-  const combined = valid.length > 0 ? combineRsuGrants(valid, profile) : null;
+  const valid = outcomes.flatMap((o) => (o.kind === "ok" ? [o.result] : []));
+  // A total that silently skips a grant is not the total: wait for all of them.
+  const complete = valid.length === grants.length;
+  const combined = complete ? combineRsuGrants(valid, profile) : null;
   const incomePortion = valid.reduce((a, r) => a + r.incomePortion, 0);
   const anyRefund = grants.some((g) => g.changedWorkplace);
   const multi = grants.length > 1;
   // The bottom line the panels show: one grant's own, or the combined total.
   const bankIls = multi ? combined?.netToBank : valid[0]?.netToBank;
+  const pastStockPrice = outcomes.some((o) => o.kind === "ok" || o.input !== "stock price");
 
   return (
     <div className="layout">
@@ -147,6 +166,7 @@ export function RsuCalculator({
             key={g.id}
             index={i}
             grant={g}
+            needsGrantPrice={outcomes[i].kind === "needs" && outcomes[i].input === "grant price"}
             onChange={(patch) => update(g.id, patch)}
             onRemove={
               grants.length > 1 ? () => setGrants(grants.filter((x) => x.id !== g.id)) : undefined
@@ -166,18 +186,37 @@ export function RsuCalculator({
       </div>
 
       <section className="results-col" id={RESULTS_ID} aria-label="Results" tabIndex={-1}>
-        {valid.length === 0 ? (
-          <EmptyResults />
+        {!pastStockPrice ? (
+          <EmptyResults>{grants.some((g) => quoteOf(g).status === "failed") ? NO_PRICE_YET : undefined}</EmptyResults>
+        ) : !multi && outcomes[0].kind === "needs" ? (
+          <EmptyResults>{`Enter the ${outcomes[0].input} and your after-tax breakdown appears here.`}</EmptyResults>
         ) : (
           <>
-            {grants.map((g, i) =>
-              results[i] ? (
+            {grants.map((g, i) => {
+              const o = outcomes[i];
+              return (
                 <section className="panel results-panel" key={g.id}>
-                  {grants.length > 1 ? <h2>RSU grant {i + 1}</h2> : null}
-                  <GrantResults result={results[i]!} grant={g} fx={fx} showInUsd={showInUsd} />
+                  {multi ? <h2>RSU grant {i + 1}</h2> : null}
+                  {o.kind === "ok" ? (
+                    <GrantResults outcome={o} grant={g} fx={fx} showInUsd={showInUsd} />
+                  ) : (
+                    <p className="muted">Enter this grant's {o.input} to see its breakdown.</p>
+                  )}
                 </section>
-              ) : null,
-            )}
+              );
+            })}
+
+            {multi && !combined ? (
+              <section className="panel results-panel">
+                <h2>Combined total</h2>
+                <p className="muted">
+                  {[
+                    "Appears once every grant is complete.",
+                    ...outcomes.flatMap((o, i) => (o.kind === "needs" ? [`Grant ${i + 1} needs a ${o.input}.`] : [])),
+                  ].join(" ")}
+                </p>
+              </section>
+            ) : null}
 
             {combined && grants.length === 1 ? (
               <section className="panel results-panel">
@@ -233,50 +272,44 @@ export function RsuCalculator({
   );
 }
 
+/** What the grant-price field says under itself, unless the user has typed one. */
+function grantPriceNote(g: Grant, cur: "ILS" | "USD"): string | undefined {
+  if (g.grantPriceOverride !== "") return undefined;
+  const history = historyOf(g);
+  switch (history.status) {
+    case "ok":
+      return `Fetched from price history: ${money(history.value, cur)}. Type to override it.`;
+    case "loading":
+      return "Fetching the grant-date price…";
+    case "failed":
+      return "Couldn't fetch the grant-date price. Enter the 30-day average before the grant date.";
+    case "idle":
+      return "Enter the 30-day average before the grant date.";
+  }
+}
+
 function GrantCard({
   index,
   grant,
+  needsGrantPrice,
   onChange,
   onRemove,
 }: {
   index: number;
   grant: Grant;
+  /** The missing grant price is the only thing between this grant and a result. */
+  needsGrantPrice: boolean;
   onChange: (patch: Partial<Grant>) => void;
   onRemove?: () => void;
 }) {
-  // Fetch the live quote when the symbol changes.
-  useEffect(() => {
-    const sym = grant.symbol.trim();
-    if (!sym) return;
-    let active = true;
-    onChange({ loading: true });
-    fetchQuote(sym).then((q) => {
-      if (!active) return;
-      if (q) onChange({ livePrice: q.price, isTase: q.isTase, currency: q.currency, loading: false });
-      else onChange({ loading: false });
-    });
-    return () => {
-      active = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [grant.symbol]);
+  // A failed lookup turns the manual price on; turning it back off sticks.
+  useLookup(grant.symbol.trim(), fetchQuote, (quote) =>
+    onChange(quote.status === "failed" ? { quote, setPrice: true } : { quote }),
+  );
+  useLookup(historyKey(grant), fetchHistory, (history) => onChange({ history }));
 
-  // Fetch the grant-date 30-day average when symbol or grant date changes.
-  useEffect(() => {
-    const sym = grant.symbol.trim();
-    if (!sym || !grant.grantDate) return;
-    let active = true;
-    fetchGrantPrice(sym, new Date(grant.grantDate)).then((p) => {
-      if (active && p) onChange({ grantPriceLive: p });
-    });
-    return () => {
-      active = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [grant.symbol, grant.grantDate]);
-
-  const cur = grant.isTase ? "ILS" : "USD";
-  const effPrice = grant.setPrice ? Number(grant.priceOverride) : grant.livePrice;
+  const cur = isTase(grant) ? "ILS" : "USD";
+  const history = historyOf(grant);
 
   return (
     <section className="panel grant">
@@ -311,27 +344,27 @@ function GrantCard({
         checked={grant.setPrice}
         onChange={(v) => onChange({ setPrice: v })}
       />
+      <p className="muted" role="status">
+        {quoteStatus(quoteOf(grant), grant.setPrice)}
+      </p>
       {grant.setPrice ? (
         <Field label={`Stock price (${cur})`}>
           <NumberInput value={grant.priceOverride} onChange={(v) => onChange({ priceOverride: v })} min={0} step={0.0001} />
         </Field>
-      ) : (
-        <p className="muted">
-          {grant.loading
-            ? "Fetching price…"
-            : effPrice
-              ? `Live price: ${money(effPrice, cur)}`
-              : "Enter a symbol, or turn on “Set stock price”."}
-        </p>
-      )}
+      ) : null}
 
-      <Field label={`Grant price (${cur}) — optional override`} help="Average price over the 30 working days before the grant date. Auto-filled from history when available.">
+      <Field
+        label={`Grant price (${cur})`}
+        help="Average price over the 30 working days before the grant date. Filled from price history when it can be fetched."
+        note={grantPriceNote(grant, cur)}
+        invalid={needsGrantPrice}
+      >
         <NumberInput
           value={grant.grantPriceOverride}
           onChange={(v) => onChange({ grantPriceOverride: v })}
           min={0}
           step={0.0001}
-          placeholder={grant.grantPriceLive ? num(grant.grantPriceLive, 4) : "auto"}
+          placeholder={history.status === "ok" ? num(history.value, 4) : undefined}
         />
       </Field>
 
@@ -360,20 +393,17 @@ function GrantCard({
 }
 
 function GrantResults({
-  result,
+  outcome: { result, price: effPrice, grantPrice },
   grant,
   fx,
   showInUsd,
 }: {
-  result: RsuGrantResult;
+  outcome: Extract<Outcome, { kind: "ok" }>;
   grant: Grant;
   fx: number;
   showInUsd: boolean;
 }) {
-  const cur = grant.isTase ? "ILS" : "USD";
-  const effPrice = grant.setPrice ? Number(grant.priceOverride) : grant.livePrice ?? 0;
-  const grantPrice =
-    grant.grantPriceOverride !== "" ? Number(grant.grantPriceOverride) : grant.grantPriceLive ?? effPrice;
+  const cur = isTase(grant) ? "ILS" : "USD";
   const bankCur = showInUsd ? "USD" : "ILS";
   const bankVal = showInUsd ? result.netToBank / fx : result.netToBank;
 
@@ -392,7 +422,7 @@ function GrantResults({
           { label: "Fees", value: feesShare, tone: "fees" },
         ]}
       />
-      {!grant.isTase ? <ResultRow label="USD → ILS" value={`1$ = ${num(fx, 4)}₪`} /> : null}
+      {!isTase(grant) ? <ResultRow label="USD → ILS" value={`1$ = ${num(fx, 4)}₪`} /> : null}
       <ResultRow label="Stock price" value={<AnimatedValue value={effPrice} format={(n) => money(n, cur)} />} />
       <ResultRow label="Grant price" help="30-working-day average before the grant date — the income/capital split basis." value={<AnimatedValue value={grantPrice} format={(n) => money(n, cur)} />} />
       <ResultRow label="Gross" help="Sale value before tax: price × shares × fx." value={<AnimatedValue value={result.gross} format={ils} />}>
