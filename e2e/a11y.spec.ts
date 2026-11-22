@@ -79,3 +79,52 @@ test("axe: RSU at 390x844 with the results summary up", async ({ page }) => {
     .map((v) => `${v.id} (${v.impact}, ${v.nodes.length} nodes): ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`);
   expect(blocking, "serious/critical axe violations").toEqual([]);
 });
+
+// The market-failure states: the live price fetch failed, the grant price is
+// missing, and a second grant still lacks one. Every third-party host aborts.
+const FAILURE_STATES: { name: string; reach: (page: import("@playwright/test").Page) => Promise<void> }[] = [
+  {
+    name: "live price fetch failed",
+    reach: async (page) => {
+      await page.getByLabel("Stock symbol").fill("WIX");
+      await expect(page.getByRole("status").filter({ hasText: "Couldn't fetch" })).toBeVisible();
+    },
+  },
+  {
+    name: "grant price missing",
+    reach: async (page) => {
+      await page.getByRole("checkbox", { name: /set stock price/i }).check();
+      await page.getByLabel("Stock price (USD)").fill("150");
+      await expect(page.getByLabel(/^Grant price \(USD\)/)).toHaveAttribute("aria-invalid", "true");
+    },
+  },
+  {
+    name: "multi-grant partial",
+    reach: async (page) => {
+      await page.getByRole("checkbox", { name: /set stock price/i }).check();
+      await page.getByLabel("Stock price (USD)").fill("150");
+      await page.getByLabel(/^Grant price \(USD\)/).fill("100");
+      await page.getByRole("button", { name: /add another grant/i }).click();
+      await expect(page.getByRole("heading", { name: "Combined total" })).toBeVisible();
+    },
+  },
+];
+
+for (const viewport of VIEWPORTS) {
+  for (const state of FAILURE_STATES) {
+    test(`axe: RSU ${state.name} at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+      await page.route((url) => url.hostname !== "localhost", (route) => route.abort());
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await page.setViewportSize(viewport);
+      await page.goto("/");
+      await state.reach(page);
+      await page.getByRole("heading", { name: "Tlush" }).click(); // leave the field
+
+      const { violations } = await new AxeBuilder({ page }).analyze();
+      const blocking = violations
+        .filter((v) => v.impact === "serious" || v.impact === "critical")
+        .map((v) => `${v.id} (${v.impact}, ${v.nodes.length} nodes): ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`);
+      expect(blocking, "serious/critical axe violations").toEqual([]);
+    });
+  }
+}
