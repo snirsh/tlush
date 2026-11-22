@@ -6,8 +6,10 @@ export function Explanation() {
       <p>
         A short reference for every field, toggle and result row. Calculations
         follow Section 102 of the Israeli Income Tax Ordinance (capital track),
-        including selling and transfer fees. Everything runs in your browser —
-        nothing is sent to a server or saved. This is not legal or tax advice.
+        including selling and transfer fees. Your figures (salary, shares, prices
+        you type) stay in your browser and are never saved or sent. Only a
+        ticker, a date range or a search text goes to our price lookup, which
+        forwards it to Yahoo Finance. This is not legal or tax advice.
       </p>
 
       <h3>General inputs</h3>

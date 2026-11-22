@@ -1,4 +1,4 @@
-import { fetchJsonWithFallback } from "./http";
+import { fetchJson } from "./http";
 
 /** A sensible fallback if every FX source is unreachable. The user can override. */
 export const FALLBACK_USD_ILS = 3.7;
@@ -17,14 +17,14 @@ interface ErApiResponse {
  * back to a static rate. Never throws.
  */
 export async function fetchUsdIls(): Promise<{ rate: number; live: boolean }> {
-  const frankfurter = await fetchJsonWithFallback<FrankfurterResponse>(
+  const frankfurter = await fetchJson<FrankfurterResponse>(
     "https://api.frankfurter.app/latest?from=USD&to=ILS",
   );
   if (frankfurter?.rates?.ILS) {
     return { rate: frankfurter.rates.ILS, live: true };
   }
 
-  const erApi = await fetchJsonWithFallback<ErApiResponse>(
+  const erApi = await fetchJson<ErApiResponse>(
     "https://open.er-api.com/v6/latest/USD",
   );
   if (erApi?.rates?.ILS) {
@@ -36,7 +36,7 @@ export async function fetchUsdIls(): Promise<{ rate: number; live: boolean }> {
 
 /** Historical USD→ILS rate for a given date (used for ESPP purchase-day rate). */
 export async function fetchUsdIlsOn(date: string): Promise<number | null> {
-  const data = await fetchJsonWithFallback<FrankfurterResponse>(
+  const data = await fetchJson<FrankfurterResponse>(
     `https://api.frankfurter.app/${date}?from=USD&to=ILS`,
   );
   return data?.rates?.ILS ?? null;

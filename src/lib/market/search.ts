@@ -1,20 +1,7 @@
-import { fetchJsonWithFallback } from "./http";
+import { normalizeSearch, type SearchBody, type SearchMatch } from "../../../api/quote";
+import { fetchApi } from "./http";
 
-export interface SymbolMatch {
-  symbol: string;
-  name: string;
-  exchange: string;
-}
-
-interface YahooSearch {
-  quotes?: {
-    symbol?: string;
-    shortname?: string;
-    longname?: string;
-    exchDisp?: string;
-    quoteType?: string;
-  }[];
-}
+export type SymbolMatch = SearchMatch;
 
 let bundledCache: SymbolMatch[] | null = null;
 
@@ -43,26 +30,15 @@ function filterBundled(list: SymbolMatch[], query: string): SymbolMatch[] {
 }
 
 /**
- * Symbol autocomplete. Tries Yahoo's live search first, then falls back to the
- * bundled offline list so suggestions still work without network access.
+ * Symbol autocomplete. Tries the live search behind /api/quote first, then the
+ * bundled offline list, so suggestions still work without network access.
  */
 export async function searchSymbols(query: string): Promise<SymbolMatch[]> {
   const q = query.trim();
   if (q.length < 1) return [];
 
-  const data = await fetchJsonWithFallback<YahooSearch>(
-    `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(
-      q,
-    )}&quotesCount=8&newsCount=0`,
-  );
-  const live = (data?.quotes ?? [])
-    .filter((x) => x.symbol && (x.quoteType === "EQUITY" || x.quoteType === "ETF"))
-    .map((x) => ({
-      symbol: x.symbol as string,
-      name: x.longname ?? x.shortname ?? (x.symbol as string),
-      exchange: x.exchDisp ?? "",
-    }));
-  if (live.length > 0) return live;
+  const live = (await fetchApi<SearchBody>({ q: normalizeSearch(q) }))?.matches;
+  if (Array.isArray(live) && live.length > 0) return live;
 
   return filterBundled(await loadBundled(), q);
 }

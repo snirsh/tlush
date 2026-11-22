@@ -19,6 +19,8 @@ export default defineConfig({
   webServer: {
     command: "npm run build && npm run preview -- --port 4173 --strictPort",
     url: "http://localhost:4173",
+    // /api/quote answers from e2e/fixtures/yahoo.ts: no live market data in e2e.
+    env: { TLUSH_YAHOO_FIXTURES: "1" },
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
