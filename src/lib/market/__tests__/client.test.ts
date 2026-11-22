@@ -54,10 +54,16 @@ describe("fetchGrantPrice", () => {
 });
 
 describe("searchSymbols", () => {
-  it("asks /api/quote with the trimmed text alone", async () => {
+  it("asks /api/quote with the normalised text alone, so equivalent searches share one URL", async () => {
     const urls = stubFetch(() => json({ matches: [{ symbol: "WIX", name: "Wix.com Ltd.", exchange: "NASDAQ" }] }));
     expect(await searchSymbols(" wix ")).toEqual([{ symbol: "WIX", name: "Wix.com Ltd.", exchange: "NASDAQ" }]);
-    expect(urls.map((u) => `${u.pathname}?${u.searchParams}`)).toEqual(["/api/quote?q=wix"]);
+    await searchSymbols("WIX   Ltd");
+    await searchSymbols("wix ltd");
+    expect(urls.map((u) => `${u.pathname}${u.search}`)).toEqual([
+      "/api/quote?q=wix",
+      "/api/quote?q=wix+ltd",
+      "/api/quote?q=wix+ltd",
+    ]);
   });
 
   it("falls back to the bundled tickers.json when the function fails", async () => {

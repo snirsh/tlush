@@ -64,6 +64,15 @@ const PARAMS: Record<Query["mode"], string[]> = {
   search: ["q"],
 };
 
+/**
+ * The one spelling of a search text: trimmed, inner whitespace collapsed to one
+ * space, lower case. The client sends this form so equivalent searches share a
+ * CDN cache entry; the function applies it again before forwarding.
+ */
+export function normalizeSearch(text: string): string {
+  return text.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
 /** The query as exactly one mode's parameters, each valid, or null. */
 function parseQuery(params: URLSearchParams, nowMs: number): Query | null {
   const keys = [...params.keys()].sort();
@@ -74,7 +83,7 @@ function parseQuery(params: URLSearchParams, nowMs: number): Query | null {
   const get = (key: string) => params.get(key) ?? "";
 
   if (mode === "search") {
-    const q = get("q").trim();
+    const q = normalizeSearch(get("q"));
     return SEARCH_TEXT.test(q) ? { mode, q } : null;
   }
   const symbol = get("symbol");

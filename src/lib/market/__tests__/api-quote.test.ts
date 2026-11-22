@@ -28,7 +28,7 @@ describe("validation", () => {
     "q=",
     "q=%20%20",
     `q=${"a".repeat(41)}`,
-    "q=wix%0Ad",
+    "q=wix%00d",
     "q=wix&symbol=WIX",
     `symbol=WIX&period1=${JAN_15_2024}`,
     `symbol=WIX&period1=${JAN_15_2024}&period2=${JAN_15_2024}`,
@@ -59,10 +59,14 @@ describe("validation", () => {
     expect(res.status).toBe(200);
   });
 
-  it("trims the search text and accepts Hebrew", async () => {
-    const { res, urls } = await call(`q=${encodeURIComponent("  טבע ")}`, async () => ok({ quotes: [] }));
+  it.each([
+    ["  טבע ", "טבע"],
+    ["  Wix.COM \t  Ltd\n", "wix.com ltd"],
+    [`${"A".repeat(20)}    ${"B".repeat(19)}`, `${"a".repeat(20)} ${"b".repeat(19)}`],
+  ])("forwards %j as %j", async (text, forwarded) => {
+    const { res, urls } = await call(`q=${encodeURIComponent(text)}`, async () => ok({ quotes: [] }));
     expect(res.status).toBe(200);
-    expect(new URL(urls[0]).searchParams.get("q")).toBe("טבע");
+    expect(new URL(urls[0]).searchParams.get("q")).toBe(forwarded);
   });
 });
 
