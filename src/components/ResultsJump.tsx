@@ -89,9 +89,9 @@ export function ResultsJump({ label, value }: { label: string; value: string }) 
       data-hidden={inView || editing ? "" : undefined}
     >
       <span className="results-jump-sum">
-        <span className="results-jump-label">{label}</span>
+        <span className="results-jump-label">{label}</span>{" "}
         <span className="results-jump-value">{value}</span>
-      </span>
+      </span>{" "}
       <span className="results-jump-cta">
         See breakdown
         <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
