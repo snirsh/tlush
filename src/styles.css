@@ -226,6 +226,7 @@ input:focus, select:focus {
 .inline { display: flex; align-items: center; gap: 12px; }
 .inline input { width: auto; flex: 1; }
 .muted { color: var(--ink-2); font-size: 13.5px; }
+.muted:empty { margin: 0; }
 
 /* A compact two-option segmented control (e.g. discount % vs price) */
 .seg-switch {

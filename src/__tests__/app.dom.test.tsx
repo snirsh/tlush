@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 import { App } from "../App";
@@ -45,6 +45,8 @@ describe("RSU calculator UI", () => {
     const price = screen.getByLabelText("Stock price (USD)");
     await user.clear(price);
     await user.type(price, "200");
+    // No symbol, so no price history: the grant price must be entered.
+    await user.type(screen.getByLabelText(/^Grant price \(USD\)/), "200");
 
     // Results render with gross = price × shares × fallback FX (3.7).
     // 200 × 100 × 3.7 = ₪74,000.00
@@ -209,6 +211,7 @@ describe("result rows", () => {
     render(<App />);
     await user.click(screen.getByRole("checkbox", { name: /set stock price/i }));
     await user.type(screen.getByLabelText("Stock price (USD)"), "200");
+    await user.type(screen.getByLabelText(/^Grant price \(USD\)/), "200");
     await screen.findByText("Total net");
     return user;
   }
@@ -321,13 +324,19 @@ describe("results jump (phone summary)", () => {
     return (visible: boolean) => act(() => callback([{ isIntersecting: visible }]));
   }
 
-  /** Turn on the manual price and type one (synthetic figure). */
+  /**
+   * Turn on the manual price and type one (synthetic figure), and on RSU the
+   * same grant price. Returns the field typed last, which keeps focus.
+   */
   async function enterPrice(user: ReturnType<typeof userEvent.setup>, value: string) {
     await user.click(screen.getByRole("checkbox", { name: /set stock price/i }));
     const price = screen.getByLabelText("Stock price (USD)");
     await user.clear(price);
     await user.type(price, value);
-    return price;
+    const grant = screen.queryByLabelText(/^Grant price \(USD\)/);
+    if (!grant) return price;
+    await user.type(grant, value);
+    return grant;
   }
 
   /** The figure in the statement's own "Net to bank" row. */
@@ -368,8 +377,8 @@ describe("results jump (phone summary)", () => {
     const report = stubObserver();
     const user = userEvent.setup();
     render(<App />);
-    const price = await enterPrice(user, "200");
-    expect(price).toHaveFocus();
+    const field = await enterPrice(user, "200");
+    expect(field).toHaveFocus();
     expect(await waitFor(() => jump()!)).toHaveAttribute("data-hidden");
     report(false); // results scrolled away: only the editing keeps it down
     expect(jump()).toHaveAttribute("data-hidden");
@@ -408,6 +417,10 @@ describe("results jump (phone summary)", () => {
     render(<App />);
     await enterPrice(user, "200");
     await user.click(screen.getByRole("button", { name: /add another grant/i }));
+    const second = screen.getAllByRole("heading", { name: "RSU grant 2" })[0].closest("section")!;
+    await user.click(within(second).getByRole("checkbox", { name: /set stock price/i }));
+    await user.type(within(second).getByLabelText("Stock price (USD)"), "120");
+    await user.type(within(second).getByLabelText(/^Grant price \(USD\)/), "80");
     const combined = screen.getByRole("heading", { name: "Combined total" }).closest("section")!;
     expect(jump()).toHaveAccessibleName(
       `Net to bank, all grants ${statementNetToBank(combined)} See breakdown`,
