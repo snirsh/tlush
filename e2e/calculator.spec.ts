@@ -101,3 +101,94 @@ test.describe("phone results summary", () => {
     await expect(page.locator(".results-jump")).toBeHidden();
   });
 });
+
+test.describe("phone results summary never covers what you need", () => {
+  const MARKET_HOSTS =
+    /^https:\/\/([^/]+\.)?(frankfurter\.app|er-api\.com|corsproxy\.io|allorigins\.win|finance\.yahoo\.com)\//;
+
+  // Below 920px, plus a 34px bottom inset (an iPhone home indicator) simulated
+  // by padding the bar, since Chromium has no env(safe-area-inset-bottom).
+  const CASES = [
+    { width: 390, height: 844, inset: 0 },
+    { width: 390, height: 844, inset: 34 },
+    { width: 700, height: 1000, inset: 0 },
+    { width: 919, height: 1000, inset: 0 },
+  ];
+
+  for (const { width, height, inset } of CASES) {
+    test(`at ${width}x${height}${inset ? ` with a ${inset}px inset` : ""}`, async ({ page }) => {
+      await page.route(MARKET_HOSTS, (route) => route.abort());
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await page.setViewportSize({ width, height });
+      await page.goto("/");
+      if (inset) await page.addStyleTag({ content: `.results-jump { padding-bottom: ${10 + inset}px !important; }` });
+      await page.getByRole("checkbox", { name: /set stock price/i }).check();
+      await page.getByLabel("Stock price (USD)").fill("150");
+      await page.getByRole("heading", { name: "Tlush" }).click();
+      const bar = page.locator(".results-jump");
+      const resultsOnScreen = () =>
+        page.evaluate(() => {
+          const r = document.getElementById("results")!.getBoundingClientRect();
+          return r.top < innerHeight && r.bottom > 0;
+        });
+
+      // Scrolling the whole page: the bar is only ever up while the results
+      // are entirely off screen, and it is gone at the bottom of the page.
+      const end = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
+      for (let y = 0; y < end; y += 200) {
+        await page.evaluate((y) => scrollTo(0, y), y);
+        await expect.poll(async () => (await bar.isVisible()) && (await resultsOnScreen())).toBe(false);
+      }
+      await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+      await expect(bar).toBeHidden();
+
+      // Tabbing through every input: no focused control is left under it. (The
+      // first row tabbed into the results can be scrolled to the bottom edge;
+      // the bar drops away on the next observer callback, hence the poll.)
+      await page.evaluate(() => scrollTo(0, 0));
+      await page.getByRole("tabpanel").focus();
+      for (let i = 0; i < 60; i++) {
+        await page.keyboard.press("Tab");
+        const overlap = () =>
+          page.evaluate(() => {
+            const el = document.activeElement!;
+            const jump = document.querySelector(".results-jump")!;
+            if (el === jump || getComputedStyle(jump).visibility === "hidden") return false;
+            const a = el.getBoundingClientRect();
+            const b = jump.getBoundingClientRect();
+            return a.bottom > b.top && a.top < b.bottom;
+          });
+        await expect.poll(overlap, { message: `focus #${i} stays under the summary` }).toBe(false);
+        if (await page.evaluate(() => !!document.activeElement?.closest("#results"))) break;
+      }
+    });
+  }
+});
+
+test("phone results summary: out of the tab order while hidden", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await page.getByRole("checkbox", { name: /set stock price/i }).check();
+  await page.getByLabel("Stock price (USD)").fill("150");
+  const summary = page.getByRole("link", { name: /See breakdown/ });
+  const panel = page.getByRole("tabpanel", { name: "RSU" });
+
+  // Hidden by keyboard focus in the inputs: Shift+Tab from the first input
+  // goes straight back to the panel, past the (hidden) summary.
+  await panel.focus();
+  await page.keyboard.press("Tab");
+  await expect(summary).toBeFocused(); // up, so reachable
+  await page.keyboard.press("Tab");
+  await expect(summary).toBeHidden(); // focus now in the inputs
+  await page.keyboard.press("Shift+Tab");
+  await expect(panel).toBeFocused();
+
+  // Hidden because the results are on screen: Tab from the panel skips it.
+  await page.getByRole("region", { name: "Results" }).scrollIntoViewIfNeeded();
+  await expect(summary).toBeHidden();
+  await panel.evaluate((el) => el.focus({ preventScroll: true }));
+  await page.keyboard.press("Tab");
+  await expect(page.locator(".results-jump")).not.toBeFocused();
+  expect(await page.evaluate(() => document.activeElement?.closest(".inputs-col") !== null)).toBe(true);
+});
