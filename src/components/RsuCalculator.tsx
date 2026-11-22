@@ -19,6 +19,7 @@ import {
 } from "./FeeEditor";
 import { AnimatedValue, DateInput, EmptyResults, Field, NumberInput, ResultRow, Toggle } from "./ui";
 import { BreakdownBar } from "./Breakdown";
+import { RESULTS_ID, ResultsJump } from "./ResultsJump";
 
 interface Grant {
   id: string;
@@ -127,9 +128,18 @@ export function RsuCalculator({
   const combined = valid.length > 0 ? combineRsuGrants(valid, profile) : null;
   const incomePortion = valid.reduce((a, r) => a + r.incomePortion, 0);
   const anyRefund = grants.some((g) => g.changedWorkplace);
+  const multi = grants.length > 1;
+  // The bottom line the panels show: one grant's own, or the combined total.
+  const bankIls = multi ? combined?.netToBank : valid[0]?.netToBank;
 
   return (
     <div className="layout">
+      {bankIls !== undefined ? (
+        <ResultsJump
+          label={multi ? "Net to bank, all grants" : "Net to bank"}
+          value={showInUsd ? money(bankIls / fx, "USD") : ils(bankIls)}
+        />
+      ) : null}
       <div className="inputs-col">
         {globalInputs}
         {grants.map((g, i) => (
@@ -155,7 +165,7 @@ export function RsuCalculator({
         ) : null}
       </div>
 
-      <div className="results-col">
+      <section className="results-col" id={RESULTS_ID} aria-label="Results" tabIndex={-1}>
         {valid.length === 0 ? (
           <EmptyResults />
         ) : (
@@ -218,7 +228,7 @@ export function RsuCalculator({
             ) : null}
           </>
         )}
-      </div>
+      </section>
     </div>
   );
 }
