@@ -425,6 +425,30 @@ describe("results jump (phone summary)", () => {
     },
   );
 
+  it.each([
+    ["the window loses focus", () => fireEvent.blur(window)],
+    [
+      "the page is hidden",
+      () => {
+        const hidden = vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+        fireEvent(document, new Event("visibilitychange"));
+        hidden.mockRestore();
+      },
+    ],
+  ])("comes back when %s mid-press", async (_, leave) => {
+    const report = stubObserver();
+    const user = userEvent.setup();
+    render(<App />);
+    await enterPrice(user, "200");
+    report(false);
+    const heading = screen.getByRole("heading", { name: "Tlush" });
+
+    await user.pointer({ keys: "[MouseLeft>]", target: heading });
+    expect(jump()).toHaveAttribute("data-hidden");
+    leave();
+    await waitFor(() => expect(jump()).not.toHaveAttribute("data-hidden"));
+  });
+
   it("hides while the results are on screen", async () => {
     const report = stubObserver();
     const user = userEvent.setup();
