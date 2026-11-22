@@ -647,6 +647,16 @@ input:focus, select:focus {
   text-align: center;
 }
 .footer p { max-width: 60ch; margin: 0 auto; line-height: 1.65; }
+.footer .footer-credit { margin-block-start: 10px; }
+.footer a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--ink-3-mark);
+  transition: color 0.14s ease;
+}
+.footer a:hover { color: var(--ink-2); }
+.footer a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 2px; }
 
 /* ================================ Responsive =============================== */
 @media (max-width: 560px) {
