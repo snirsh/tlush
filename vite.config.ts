@@ -1,5 +1,7 @@
-import { defineConfig, type Plugin } from "vite";
+import { defineConfig, type Connect, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+import { handle } from "./api/quote";
+import { fixtureYahoo } from "./e2e/fixtures/yahoo";
 
 // When deployed to GitHub Pages at https://<user>.github.io/<repo>/ the app is
 // served from a sub-path. Set BASE_PATH in CI to that sub-path (e.g. "/repo/").
@@ -36,9 +38,42 @@ function preloadFonts(): Plugin {
   };
 }
 
+/**
+ * Serves `<base>api/quote` from the same handler Vercel deploys, under
+ * `vite dev` and `vite preview`, so the lookup works locally without Vercel.
+ * TLUSH_YAHOO_FIXTURES=1 (the e2e server) swaps Yahoo for a local fixture.
+ */
+function apiQuote(): Plugin {
+  const upstream = process.env.TLUSH_YAHOO_FIXTURES === "1" ? fixtureYahoo : fetch;
+  const middleware =
+    (path: string): Connect.NextHandleFunction =>
+    (req, res, next) => {
+      const url = new URL(req.url ?? "/", "http://localhost");
+      if (url.pathname !== path) return next();
+      if (req.method !== "GET") {
+        res.statusCode = 405;
+        return res.end();
+      }
+      handle(new Request(url), upstream).then(async (response) => {
+        res.statusCode = response.status;
+        response.headers.forEach((value, key) => res.setHeader(key, value));
+        res.end(await response.text());
+      }, next);
+    };
+  return {
+    name: "tlush:api-quote",
+    configureServer(server) {
+      server.middlewares.use(middleware(`${server.config.base}api/quote`));
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(middleware(`${server.config.base}api/quote`));
+    },
+  };
+}
+
 export default defineConfig({
   base,
-  plugins: [react(), preloadFonts()],
+  plugins: [react(), preloadFonts(), apiQuote()],
   build: {
     outDir: "dist",
     sourcemap: false,
