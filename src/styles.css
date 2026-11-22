@@ -537,6 +537,56 @@ input:focus, select:focus {
   color: #fff;
 }
 
+/* ===================== Results jump (phone widths only) ==================== */
+/* A quiet strip pinned to the bottom: the bottom line and a way down to it.
+   Hidden while the results are on screen or a field is being edited, and gone
+   entirely at desktop widths, where the results column is already in view. */
+.results-col { scroll-margin-top: 16px; }
+.results-col:focus { outline: none; }
+.results-col:focus-visible { outline: 2px solid var(--focus); outline-offset: 4px; border-radius: var(--r-lg); }
+
+.results-jump {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 64px;
+  padding: 10px 20px max(10px, env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-top: 1px solid var(--line-2);
+  color: var(--ink);
+  text-decoration: none;
+  transition: transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1), visibility 0.28s;
+}
+.results-jump:hover .results-jump-cta { color: var(--ink); }
+.results-jump[data-hidden] { transform: translateY(100%); visibility: hidden; }
+.results-jump:focus-visible { outline: 2px solid var(--focus); outline-offset: -5px; border-radius: var(--r-md); }
+.results-jump-sum { display: flex; flex-direction: column; min-width: 0; }
+.results-jump-label { font-size: 12.5px; color: var(--ink-2); line-height: 1.4; }
+.results-jump-value {
+  font: 500 17px/1.3 var(--mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: #fff;
+  white-space: nowrap;
+}
+.results-jump-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  font: 500 13.5px var(--sans);
+  color: var(--ink-2);
+}
+@media (min-width: 920px) {
+  .results-jump { display: none; }
+}
+
 /* =========================== Symbol autocomplete =========================== */
 .symbol-input { position: relative; }
 .symbol-list {
@@ -601,6 +651,7 @@ input:focus, select:focus {
 @media (max-width: 560px) {
   .app { padding: 36px 16px 64px; }
   .tabs { gap: 22px; }
+  .results-jump { padding-inline: 16px; }
   .info-tip { width: 180px; }
 }
 

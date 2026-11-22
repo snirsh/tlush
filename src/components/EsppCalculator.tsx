@@ -13,6 +13,7 @@ import { SymbolInput } from "./SymbolInput";
 import { EMPTY_FEES, FeeEditor, resolveFees, type FeeOverrides } from "./FeeEditor";
 import { AnimatedValue, DateInput, EmptyResults, Field, NumberInput, ResultRow, Toggle } from "./ui";
 import { BreakdownBar, type Segment } from "./Breakdown";
+import { RESULTS_ID, ResultsJump } from "./ResultsJump";
 
 /** How the purchase discount is entered: a percentage off, or the exact price paid. */
 export type DiscountMode = "percent" | "price";
@@ -142,6 +143,12 @@ export function EsppCalculator({
 
   return (
     <div className="layout">
+      {result ? (
+        <ResultsJump
+          label="Net to bank"
+          value={showInUsd ? money(result.netToBank / fx, "USD") : ils(result.netToBank)}
+        />
+      ) : null}
       <div className="inputs-col">
         {globalInputs}
         <section className="panel grant">
@@ -237,7 +244,7 @@ export function EsppCalculator({
         </section>
       </div>
 
-      <div className="results-col">
+      <section className="results-col" id={RESULTS_ID} aria-label="Results" tabIndex={-1}>
         {result ? (
           <section className="panel results-panel">
             <EsppResults result={result} cur={cur} effPrice={effPrice} fx={fx} showInUsd={showInUsd} settings={settings} />
@@ -245,7 +252,7 @@ export function EsppCalculator({
         ) : (
           <EmptyResults />
         )}
-      </div>
+      </section>
     </div>
   );
 }
