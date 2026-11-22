@@ -34,3 +34,28 @@ for (const viewport of VIEWPORTS) {
     });
   }
 }
+
+// The filled-in state: results, and at phone width the pinned net-to-bank
+// summary, only exist once there is a price. Synthetic figures.
+for (const viewport of VIEWPORTS) {
+  for (const tab of ["RSU", "ESPP"]) {
+    test(`axe: ${tab} with results at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+      await page.route(MARKET_HOSTS, (route) => route.abort());
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await page.setViewportSize(viewport);
+      await page.goto("/");
+
+      await page.getByRole("tab", { name: tab }).click();
+      await page.getByRole("checkbox", { name: /set stock price/i }).check();
+      await page.getByLabel("Stock price (USD)").fill("150");
+      await page.getByRole("heading", { name: "Tlush" }).click(); // leave the field
+      await expect(page.getByRole("region", { name: "Results" }).getByText("Net to bank", { exact: true })).toBeAttached();
+
+      const { violations } = await new AxeBuilder({ page }).analyze();
+      const blocking = violations
+        .filter((v) => v.impact === "serious" || v.impact === "critical")
+        .map((v) => `${v.id} (${v.impact}, ${v.nodes.length} nodes): ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`);
+      expect(blocking, "serious/critical axe violations").toEqual([]);
+    });
+  }
+}
