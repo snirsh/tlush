@@ -8,10 +8,11 @@ Tax Ordinance (capital track). It handles the income/capital split, marginal
 income tax, Bituah Leumi & health, capital-gains tax, surtax (*mas yesef*),
 broker/trustee fees, dual-currency capital methods, and miluim/maternity tips.
 
-All the math runs **in your browser**: no account, and **no personal data is
-stored or transmitted**. The only server involved is a tiny price lookup
-(`api/quote.ts`). It receives a ticker, a date range or a search text, never
-your salary or any other input, and asks Yahoo Finance on your behalf.
+All the math runs **in your browser**, with no account. **Your figures (salary,
+share counts, prices you type) are never stored or transmitted.** The only data
+that leaves the browser is a ticker, a date range or a search text, sent to our
+own price lookup (`/api/quote`, in `api/quote.ts`), which forwards it to Yahoo
+Finance.
 
 ## Features
 
