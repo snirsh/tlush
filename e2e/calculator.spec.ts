@@ -19,6 +19,7 @@ test("RSU: manual price produces after-tax results", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("checkbox", { name: /set stock price/i }).check();
   await page.getByLabel("Stock price (USD)").fill("200");
+  await page.getByLabel(/^Grant price \(USD\)/).fill("200");
 
   // Help tooltips are real (hidden) DOM text, so match row labels exactly.
   await expect(page.getByText("Average tax deduction", { exact: true })).toBeVisible();
@@ -64,6 +65,7 @@ test.describe("phone results summary", () => {
     await page.goto("/");
     await page.getByRole("checkbox", { name: /set stock price/i }).check();
     await page.getByLabel("Stock price (USD)").fill("150");
+    await page.getByLabel(/^Grant price \(USD\)/).fill("150");
   }
 
   test("at 390px sits above the fold, steps aside while typing, and jumps to the results", async ({ page }) => {
@@ -124,6 +126,7 @@ test.describe("phone results summary never covers what you need", () => {
       if (inset) await page.addStyleTag({ content: `.results-jump { padding-bottom: ${10 + inset}px !important; }` });
       await page.getByRole("checkbox", { name: /set stock price/i }).check();
       await page.getByLabel("Stock price (USD)").fill("150");
+      await page.getByLabel(/^Grant price \(USD\)/).fill("150");
       await page.getByRole("heading", { name: "Tlush" }).click();
       const bar = page.locator(".results-jump");
       const resultsOnScreen = () =>
@@ -171,6 +174,7 @@ test("phone results summary: out of the tab order while hidden", async ({ page }
   await page.goto("/");
   await page.getByRole("checkbox", { name: /set stock price/i }).check();
   await page.getByLabel("Stock price (USD)").fill("150");
+  await page.getByLabel(/^Grant price \(USD\)/).fill("150");
   const summary = page.getByRole("link", { name: /See breakdown/ });
   const panel = page.getByRole("tabpanel", { name: "RSU" });
 

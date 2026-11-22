@@ -48,6 +48,7 @@ for (const viewport of VIEWPORTS) {
       await page.getByRole("tab", { name: tab }).click();
       await page.getByRole("checkbox", { name: /set stock price/i }).check();
       await page.getByLabel("Stock price (USD)").fill("150");
+      if (tab === "RSU") await page.getByLabel(/^Grant price \(USD\)/).fill("150");
       await page.getByRole("heading", { name: "Tlush" }).click(); // leave the field
       await expect(page.getByRole("region", { name: "Results" }).getByText("Net to bank", { exact: true })).toBeAttached();
 
@@ -69,6 +70,7 @@ test("axe: RSU at 390x844 with the results summary up", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("checkbox", { name: /set stock price/i }).check();
   await page.getByLabel("Stock price (USD)").fill("150");
+  await page.getByLabel(/^Grant price \(USD\)/).fill("150");
   await page.getByRole("heading", { name: "Tlush" }).click(); // leave the field
   await page.evaluate(() => window.scrollTo(0, 0));
   await expect(page.getByRole("link", { name: /See breakdown/ })).toBeVisible();
@@ -104,6 +106,8 @@ const FAILURE_STATES: { name: string; reach: (page: import("@playwright/test").P
       await page.getByRole("checkbox", { name: /set stock price/i }).check();
       await page.getByLabel("Stock price (USD)").fill("150");
       await page.getByLabel(/^Grant price \(USD\)/).fill("100");
+      // Leave the field first: on a phone the summary bar returns on blur.
+      await page.getByRole("heading", { name: "Tlush" }).click();
       await page.getByRole("button", { name: /add another grant/i }).click();
       await expect(page.getByRole("heading", { name: "Combined total" })).toBeVisible();
     },

@@ -78,6 +78,7 @@ interface FieldInfo {
   describedBy?: string;
   /** "toggle": the label clicks a Toggle in the field; other controls are labelledby. */
   labelTarget?: "toggle";
+  invalid?: boolean;
 }
 
 const FieldContext = createContext<FieldInfo | null>(null);
@@ -86,29 +87,40 @@ export function useFieldControl(): {
   id?: string;
   "aria-labelledby"?: string;
   "aria-describedby"?: string;
+  "aria-invalid"?: true;
 } {
   const field = useContext(FieldContext);
   if (!field) return {};
   return field.labelTarget === "toggle"
     ? { "aria-labelledby": field.labelId, "aria-describedby": field.describedBy }
-    : { id: field.id, "aria-describedby": field.describedBy };
+    : { id: field.id, "aria-describedby": field.describedBy, "aria-invalid": field.invalid || undefined };
 }
 
-/** A labelled form row with optional help text. */
+/**
+ * A labelled form row with optional help text, and an optional visible note
+ * under the control (what the field needs) that the control is described by.
+ */
 export function Field({
   label,
   help,
+  note,
+  invalid,
   labelTarget,
   children,
 }: {
   label: string;
   help?: string;
+  note?: string;
+  /** The empty or entered value is what stands between the user and a result. */
+  invalid?: boolean;
   labelTarget?: "toggle";
   children: ReactNode;
 }) {
   const id = useId();
   const labelId = useId();
   const tipId = useId();
+  const noteId = useId();
+  const describedBy = [help ? tipId : "", note ? noteId : ""].filter(Boolean).join(" ") || undefined;
   return (
     <div className="field">
       <span className="field-label">
@@ -118,10 +130,15 @@ export function Field({
         {help ? <Info id={tipId} text={help} /> : null}
       </span>
       <FieldContext.Provider
-        value={{ id, labelId, describedBy: help ? tipId : undefined, labelTarget }}
+        value={{ id, labelId, describedBy, labelTarget, invalid }}
       >
         {children}
       </FieldContext.Provider>
+      {note ? (
+        <span id={noteId} className="muted">
+          {note}
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -274,10 +291,14 @@ export function useDebounced<T>(value: T, delay: number): T {
 }
 
 /** Right-column placeholder shown until the inputs produce a result. */
-export function EmptyResults() {
+export function EmptyResults({
+  children = "Enter a stock price — or a symbol — and your after-tax breakdown appears here.",
+}: {
+  children?: string;
+}) {
   return (
     <div className="results-empty">
-      <p>Enter a stock price — or a symbol — and your after-tax breakdown appears here.</p>
+      <p>{children}</p>
     </div>
   );
 }

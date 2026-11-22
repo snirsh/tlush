@@ -140,17 +140,19 @@ describe("RSU: grant price is never copied from the stock price", () => {
     await user.type(grantPrice(), "100");
     await user.click(screen.getByRole("button", { name: /add another grant/i }));
 
-    const second = screen.getByRole("heading", { name: "RSU grant 2", level: 2 }).closest("section")!;
+    // The input card comes before the results column's slot of the same name.
+    const second = screen.getAllByRole("heading", { name: "RSU grant 2" })[0].closest("section")!;
     await user.click(within(second).getByRole("checkbox", { name: /set stock price/i }));
     await user.type(within(second).getByLabelText("Stock price (USD)"), "150");
 
-    const combined = within(results()).getByRole("heading", { name: "Combined total" }).closest("section")!;
-    expect(within(combined).queryByText("Net to bank")).toBeNull();
-    expect(combined).toHaveTextContent(/grant 2/i);
+    const combined = () =>
+      within(results()).getByRole("heading", { name: "Combined total" }).closest("section")!;
+    expect(within(combined()).queryByText("Net to bank")).toBeNull();
+    expect(combined()).toHaveTextContent("Grant 2 needs a grant price.");
     expect(screen.queryByRole("link", { name: /see breakdown/i })).toBeNull();
 
     await user.type(within(second).getByLabelText(/^Grant price \(USD\)/), "100");
-    expect(within(combined).getByText("Net to bank")).toBeInTheDocument();
+    expect(within(combined()).getByText("Net to bank")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /see breakdown/i })).toBeInTheDocument();
   });
 });
