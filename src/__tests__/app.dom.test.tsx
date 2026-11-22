@@ -302,6 +302,25 @@ describe("ESPP calculator UI", () => {
 describe("results jump (phone summary)", () => {
   const jump = () => screen.queryByRole("link", { name: /see breakdown/i });
 
+  /**
+   * jsdom has no IntersectionObserver. Stub one whose callback the test drives;
+   * report(visible) says whether the results column is on screen.
+   */
+  function stubObserver() {
+    let callback: (entries: { isIntersecting: boolean }[]) => void = () => {};
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        constructor(cb: typeof callback) {
+          callback = cb;
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    return (visible: boolean) => act(() => callback([{ isIntersecting: visible }]));
+  }
+
   /** Turn on the manual price and type one (synthetic figure). */
   async function enterPrice(user: ReturnType<typeof userEvent.setup>, value: string) {
     await user.click(screen.getByRole("checkbox", { name: /set stock price/i }));
@@ -346,11 +365,14 @@ describe("results jump (phone summary)", () => {
   });
 
   it("steps aside while a text field is being edited", async () => {
+    const report = stubObserver();
     const user = userEvent.setup();
     render(<App />);
     const price = await enterPrice(user, "200");
     expect(price).toHaveFocus();
     expect(await waitFor(() => jump()!)).toHaveAttribute("data-hidden");
+    report(false); // results scrolled away: only the editing keeps it down
+    expect(jump()).toHaveAttribute("data-hidden");
 
     // Leaving the field brings it back. (That a tapped checkbox does not hide
     // it needs real :focus-visible; e2e covers it.)
@@ -359,17 +381,7 @@ describe("results jump (phone summary)", () => {
   });
 
   it("hides while the results are on screen", async () => {
-    let report: (visible: boolean) => void = () => {};
-    vi.stubGlobal(
-      "IntersectionObserver",
-      class {
-        constructor(cb: (entries: { isIntersecting: boolean }[]) => void) {
-          report = (visible) => act(() => cb([{ isIntersecting: visible }]));
-        }
-        observe() {}
-        disconnect() {}
-      },
-    );
+    const report = stubObserver();
     const user = userEvent.setup();
     render(<App />);
     await enterPrice(user, "200");
@@ -380,6 +392,15 @@ describe("results jump (phone summary)", () => {
     expect(link).not.toHaveAttribute("data-hidden");
     report(true);
     expect(link).toHaveAttribute("data-hidden");
+  });
+
+  it("stays hidden when it cannot tell whether the results are on screen", async () => {
+    // No IntersectionObserver (jsdom, very old engines): never risk covering them.
+    const user = userEvent.setup();
+    render(<App />);
+    await enterPrice(user, "200");
+    await user.click(screen.getByRole("heading", { name: "Tlush" }));
+    expect(await waitFor(() => jump()!)).toHaveAttribute("data-hidden");
   });
 
   it("sums every grant when there are several", async () => {
