@@ -74,17 +74,25 @@ function useEditing(): boolean {
         setEditing(latest);
       });
     };
-    // Any of these ends a press, so a lost mouseup cannot hold the bar back.
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") onRelease();
+    };
+    // Any of these ends a press, and so does leaving the window or the tab,
+    // so a lost mouseup cannot hold the bar back.
     const releases = ["mouseup", "pointercancel", "dragend", "contextmenu", "keydown"] as const;
     document.addEventListener("focusin", onIn);
     document.addEventListener("focusout", onOut);
     document.addEventListener("mousedown", onDown, true);
     for (const type of releases) document.addEventListener(type, onRelease, true);
+    window.addEventListener("blur", onRelease);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       document.removeEventListener("focusin", onIn);
       document.removeEventListener("focusout", onOut);
       document.removeEventListener("mousedown", onDown, true);
       for (const type of releases) document.removeEventListener(type, onRelease, true);
+      window.removeEventListener("blur", onRelease);
+      document.removeEventListener("visibilitychange", onVisibility);
       clearTimeout(timer);
     };
   }, []);
