@@ -6,16 +6,19 @@ file accurate when you change structure or conventions.
 
 ## What this is
 
-A static, client-side **Israeli RSU & ESPP after-tax calculator**. It estimates
+A client-side **Israeli RSU & ESPP after-tax calculator**. It estimates
 net proceeds when selling RSUs or ESPP shares under **Section 102** of the
 Israeli Income Tax Ordinance (capital track). It ships as a Vite + React + TS
 single-page app and deploys to **GitHub Pages**.
 
 Key product rules:
 
-- **No user data is ever persisted or transmitted.** All computation happens in
-  the browser. Do not add analytics, cookies, localStorage of personal inputs,
-  or any backend that receives user figures.
+- **Calculator figures are never persisted or transmitted.** Salary, share
+  counts, prices you type and every other input stay in the browser, where all
+  computation happens. The only data that leaves it is a ticker, a date range or
+  a search text, sent to our own `/api/quote`, which forwards it to Yahoo
+  Finance. Do not add analytics, cookies, localStorage of personal inputs, or
+  any backend that receives user figures.
 - Market data (stock price, USD/ILS rate, grant-date average) is fetched
   best-effort, and **every value has a manual override** so the app is fully
   usable offline. The FX rate comes straight from the browser to two free,
