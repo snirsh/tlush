@@ -22,7 +22,7 @@ interface YahooChart {
   };
 }
 
-function isTaseSymbol(symbol: string): boolean {
+export function isTaseSymbol(symbol: string): boolean {
   return symbol.toUpperCase().endsWith(".TA");
 }
 

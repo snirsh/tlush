@@ -7,7 +7,7 @@ import {
   type RsuGrantResult,
   type TaxProfile,
 } from "../lib/tax";
-import { fetchGrantPrice, fetchQuote, type Quote } from "../lib/market/quote";
+import { fetchGrantPrice, fetchQuote, isTaseSymbol, type Quote } from "../lib/market/quote";
 import { ils, money, num, pct, signTone, todayIso } from "../lib/format";
 import type { Settings } from "./GlobalInputs";
 import { SymbolInput } from "./SymbolInput";
@@ -20,7 +20,7 @@ import {
 import { AnimatedValue, DateInput, EmptyResults, Field, NumberInput, ResultRow, Toggle } from "./ui";
 import { BreakdownBar } from "./Breakdown";
 import { RESULTS_ID, ResultsJump } from "./ResultsJump";
-import { IDLE, liveQuote, quoteStatus, useLookup, type Lookup } from "./lookup";
+import { IDLE, liveQuote, lookupFor, NO_PRICE_YET, quoteStatus, useLookup, type Lookup } from "./lookup";
 
 interface Grant {
   id: string;
@@ -57,12 +57,15 @@ function newGrant(): Grant {
   };
 }
 
-const isTase = (g: Grant) => liveQuote(g.quote)?.isTase ?? false;
+const isTase = (g: Grant) => isTaseSymbol(g.symbol.trim());
+const quoteOf = (g: Grant) => lookupFor(g.quote, g.symbol.trim());
+const historyOf = (g: Grant) => lookupFor(g.history, historyKey(g));
 
 /** The grant price the split rests on: entered, or fetched. Never the stock price. */
 function grantPriceOf(g: Grant): number | null {
   if (g.grantPriceOverride !== "") return Number(g.grantPriceOverride);
-  return g.history.status === "ok" ? g.history.value : null;
+  const history = historyOf(g);
+  return history.status === "ok" ? history.value : null;
 }
 
 /** A grant's result, or the first input it still needs. */
@@ -107,7 +110,7 @@ export function RsuCalculator({
   const outcomes = useMemo(
     () =>
       grants.map((g): Outcome => {
-        const price = g.setPrice ? Number(g.priceOverride) : liveQuote(g.quote)?.price ?? 0;
+        const price = g.setPrice ? Number(g.priceOverride) : liveQuote(quoteOf(g))?.price ?? 0;
         const grantPrice = grantPriceOf(g);
         const shares = Number(g.shares) || 0;
         if (price <= 0) return { kind: "needs", input: "stock price" };
@@ -184,7 +187,7 @@ export function RsuCalculator({
 
       <section className="results-col" id={RESULTS_ID} aria-label="Results" tabIndex={-1}>
         {!pastStockPrice ? (
-          <EmptyResults />
+          <EmptyResults>{grants.some((g) => quoteOf(g).status === "failed") ? NO_PRICE_YET : undefined}</EmptyResults>
         ) : !multi && outcomes[0].kind === "needs" ? (
           <EmptyResults>{`Enter the ${outcomes[0].input} and your after-tax breakdown appears here.`}</EmptyResults>
         ) : (
@@ -272,9 +275,10 @@ export function RsuCalculator({
 /** What the grant-price field says under itself, unless the user has typed one. */
 function grantPriceNote(g: Grant, cur: "ILS" | "USD"): string | undefined {
   if (g.grantPriceOverride !== "") return undefined;
-  switch (g.history.status) {
+  const history = historyOf(g);
+  switch (history.status) {
     case "ok":
-      return `Fetched from price history: ${money(g.history.value, cur)}. Type to override it.`;
+      return `Fetched from price history: ${money(history.value, cur)}. Type to override it.`;
     case "loading":
       return "Fetching the grant-date price…";
     case "failed":
@@ -305,6 +309,7 @@ function GrantCard({
   useLookup(historyKey(grant), fetchHistory, (history) => onChange({ history }));
 
   const cur = isTase(grant) ? "ILS" : "USD";
+  const history = historyOf(grant);
 
   return (
     <section className="panel grant">
@@ -340,7 +345,7 @@ function GrantCard({
         onChange={(v) => onChange({ setPrice: v })}
       />
       <p className="muted" role="status">
-        {quoteStatus(grant.quote, grant.setPrice)}
+        {quoteStatus(quoteOf(grant), grant.setPrice)}
       </p>
       {grant.setPrice ? (
         <Field label={`Stock price (${cur})`}>
@@ -359,7 +364,7 @@ function GrantCard({
           onChange={(v) => onChange({ grantPriceOverride: v })}
           min={0}
           step={0.0001}
-          placeholder={grant.history.status === "ok" ? num(grant.history.value, 4) : undefined}
+          placeholder={history.status === "ok" ? num(history.value, 4) : undefined}
         />
       </Field>
 
