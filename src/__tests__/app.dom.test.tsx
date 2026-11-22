@@ -33,6 +33,17 @@ describe("landmarks", () => {
     expect(main).toContainElement(screen.getByRole("tablist"));
     expect(main).toContainElement(screen.getByRole("heading", { name: "General inputs" }));
   });
+
+  it("credits the author in the footer with a link that opens in a new tab", () => {
+    render(<App />);
+    const footer = screen.getByRole("contentinfo");
+    expect(within(footer).getByText((_, el) => el?.tagName === "P" && el.textContent === "made by Snir Sharristh")).toBeInTheDocument();
+    const link = within(footer).getByRole("link", { name: "Snir Sharristh" });
+    expect(link).toHaveAttribute("href", "https://snirsh.codes");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    expect(link).toHaveAccessibleDescription("opens in a new tab");
+  });
 });
 
 describe("RSU calculator UI", () => {
