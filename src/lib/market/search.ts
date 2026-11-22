@@ -1,4 +1,4 @@
-import type { SearchBody, SearchMatch } from "../../../api/quote";
+import { normalizeSearch, type SearchBody, type SearchMatch } from "../../../api/quote";
 import { fetchApi } from "./http";
 
 export type SymbolMatch = SearchMatch;
@@ -37,7 +37,7 @@ export async function searchSymbols(query: string): Promise<SymbolMatch[]> {
   const q = query.trim();
   if (q.length < 1) return [];
 
-  const live = (await fetchApi<SearchBody>({ q }))?.matches;
+  const live = (await fetchApi<SearchBody>({ q: normalizeSearch(q) }))?.matches;
   if (Array.isArray(live) && live.length > 0) return live;
 
   return filterBundled(await loadBundled(), q);
