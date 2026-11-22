@@ -6,20 +6,27 @@ file accurate when you change structure or conventions.
 
 ## What this is
 
-A static, client-side **Israeli RSU & ESPP after-tax calculator**. It estimates
+A client-side **Israeli RSU & ESPP after-tax calculator**. It estimates
 net proceeds when selling RSUs or ESPP shares under **Section 102** of the
 Israeli Income Tax Ordinance (capital track). It ships as a Vite + React + TS
 single-page app and deploys to **GitHub Pages**.
 
 Key product rules:
 
-- **No user data is ever persisted or transmitted.** All computation happens in
-  the browser. Do not add analytics, cookies, localStorage of personal inputs,
-  or any backend that receives user figures.
+- **Calculator figures are never persisted or transmitted.** Salary, share
+  counts, prices you type and every other input stay in the browser, where all
+  computation happens. The only data that leaves it is a ticker, a date range or
+  a search text, sent to our own `/api/quote`, which forwards it to Yahoo
+  Finance. Do not add analytics, cookies, localStorage of personal inputs, or
+  any backend that receives user figures.
 - Market data (stock price, USD/ILS rate, grant-date average) is fetched
-  best-effort from free, key-less public APIs, and **every value has a manual
-  override** so the app is fully usable offline. Nothing is fetched on page
-  load: the FX rate waits for the first user interaction
+  best-effort, and **every value has a manual override** so the app is fully
+  usable offline. The FX rate comes straight from the browser to two free,
+  key-less, CORS-friendly APIs (frankfurter.app, then open.er-api.com). Quotes,
+  grant-date history and symbol search go only to our own same-origin function
+  `api/quote.ts`, which forwards just the ticker, date range or search text to
+  Yahoo Finance. No CORS proxies; the browser never calls Yahoo. Nothing is
+  fetched on page load: the FX rate waits for the first user interaction
   (`src/lib/firstInteraction.ts`), quotes and search wait for a typed symbol.
 - Fonts are self-hosted (`src/assets/fonts/`); no third-party request on load.
 
@@ -38,13 +45,23 @@ src/lib/tax/        Pure tax engine (no React). The heart of the project.
   espp.ts           ESPP with/without trustee + dual-currency capital methods.
   sellingTips.ts    Miluim / maternity monthly pay.
   __tests__/        Vitest unit tests, incl. first-principles worked examples.
-src/lib/market/     FX, quotes, symbol search (best-effort, fail-soft).
+src/lib/market/     FX, quotes, symbol search (best-effort, fail-soft). Quotes and
+                    search call /api/quote; tickers.json is the search fallback.
+api/quote.ts        Vercel function (Web-standard GET, no dependencies) behind
+                    /api/quote: quote, history and search modes, strict query
+                    validation, Yahoo query1 then query2, CDN cache headers. The
+                    only place agorot ("ILA") become shekels. vite.config.ts
+                    serves it under `vite dev` and `vite preview`. Its tests live
+                    in src/lib/market/__tests__: every file in api/ deploys as a
+                    function.
 src/lib/firstInteraction.ts  Defers network lookups to the first user input.
 src/components/     React UI. Pure presentation over the engine.
 src/assets/fonts/   Self-hosted Manrope + IBM Plex Mono (OFL, see LICENSE.md).
                     vite.config.ts preloads the two above-the-fold files.
 public/tickers.json Offline symbol-autocomplete fallback list.
-e2e/                Playwright smoke tests + the axe gate (a11y.spec.ts).
+e2e/                Playwright smoke tests + the axe gate (a11y.spec.ts). The e2e
+                    server sets TLUSH_YAHOO_FIXTURES=1, so /api/quote answers from
+                    e2e/fixtures/yahoo.ts and never reaches Yahoo.
 scripts/rate-check/ Monthly checker (.github/workflows/rate-check.yml) that compares
                     years/ with the ITA booklet and the BTL rates page, then opens
                     a data PR or an issue. Not part of the app bundle: nothing in
@@ -101,6 +118,11 @@ sandboxes — the jsdom layer covers UI verification when they are.
 `.github/workflows/deploy.yml` builds on push to `master` and publishes `dist/` to
 GitHub Pages. The base path is set to `/<repo>/` via `BASE_PATH`. Enable Pages
 with "GitHub Actions" as the source in repo settings.
+
+Vercel (framework preset "Vite") builds the same app at the domain root and
+deploys `api/quote.ts` as a zero-config function at `/api/quote`. GitHub Pages
+has no functions, so on Pages the live quote, history and search lookups fail
+soft: the manual price fields and the bundled `tickers.json` take over.
 
 ## Accuracy note
 

@@ -7,7 +7,7 @@ import { expect, test } from "@playwright/test";
 // fade-in is mid-flight when contrast is measured.
 
 const MARKET_HOSTS =
-  /^https:\/\/([^/]+\.)?(frankfurter\.app|er-api\.com|corsproxy\.io|allorigins\.win|finance\.yahoo\.com)\//;
+  /^https:\/\/([^/]+\.)?(frankfurter\.app|er-api\.com)\//;
 const VIEWPORTS = [
   { width: 1440, height: 900 },
   { width: 390, height: 844 },
@@ -118,6 +118,9 @@ for (const viewport of VIEWPORTS) {
   for (const state of FAILURE_STATES) {
     test(`axe: RSU ${state.name} at ${viewport.width}x${viewport.height}`, async ({ page }) => {
       await page.route((url) => url.hostname !== "localhost", (route) => route.abort());
+      await page.route("**/api/quote?*", (route) =>
+        route.fulfill({ status: 502, contentType: "application/json", body: '{"error":"upstream"}' }),
+      );
       await page.emulateMedia({ reducedMotion: "reduce" });
       await page.setViewportSize(viewport);
       await page.goto("/");
