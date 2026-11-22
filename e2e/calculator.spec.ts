@@ -56,7 +56,7 @@ test("Explanation tab documents the fields", async ({ page }) => {
 
 test.describe("phone results summary", () => {
   const MARKET_HOSTS =
-    /^https:\/\/([^/]+\.)?(frankfurter\.app|er-api\.com|corsproxy\.io|allorigins\.win|finance\.yahoo\.com)\//;
+    /^https:\/\/([^/]+\.)?(frankfurter\.app|er-api\.com)\//;
 
   async function fill(page: import("@playwright/test").Page, width: number, height: number) {
     await page.route(MARKET_HOSTS, (route) => route.abort());
@@ -106,7 +106,7 @@ test.describe("phone results summary", () => {
 
 test.describe("phone results summary never covers what you need", () => {
   const MARKET_HOSTS =
-    /^https:\/\/([^/]+\.)?(frankfurter\.app|er-api\.com|corsproxy\.io|allorigins\.win|finance\.yahoo\.com)\//;
+    /^https:\/\/([^/]+\.)?(frankfurter\.app|er-api\.com)\//;
 
   // Below 920px, plus a 34px bottom inset (an iPhone home indicator) simulated
   // by padding the bar, since Chromium has no env(safe-area-inset-bottom).

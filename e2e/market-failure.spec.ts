@@ -1,9 +1,13 @@
 import { expect, test, type Page } from "@playwright/test";
 
-// Every third-party host is unreachable: the live price and the grant-date
-// history both fail, the way they do today behind CORS. Synthetic inputs.
+// Every third-party host is unreachable and /api/quote answers 502, the way it
+// does when Yahoo is down: the live price and the grant-date history both fail.
+// Synthetic inputs.
 async function offline(page: Page) {
   await page.route((url) => url.hostname !== "localhost", (route) => route.abort());
+  await page.route("**/api/quote?*", (route) =>
+    route.fulfill({ status: 502, contentType: "application/json", body: '{"error":"upstream"}' }),
+  );
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
 }
