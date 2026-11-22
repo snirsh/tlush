@@ -129,6 +129,20 @@ export function App() {
           rules change; verify figures with a licensed Israeli tax adviser before
           acting. Open-source and self-hostable.
         </p>
+        <p className="footer-credit">
+          made by{" "}
+          <a
+            href="https://snirsh.codes"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-describedby="new-tab-note"
+          >
+            <bdi>Snir Sharristh</bdi>
+          </a>
+        </p>
+        <span id="new-tab-note" hidden>
+          opens in a new tab
+        </span>
       </footer>
     </div>
   );
