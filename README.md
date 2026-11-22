@@ -8,8 +8,10 @@ Tax Ordinance (capital track). It handles the income/capital split, marginal
 income tax, Bituah Leumi & health, capital-gains tax, surtax (*mas yesef*),
 broker/trustee fees, dual-currency capital methods, and miluim/maternity tips.
 
-Everything runs **entirely in your browser** — no account, no backend, and **no
-personal data is stored or transmitted**.
+All the math runs **in your browser**: no account, and **no personal data is
+stored or transmitted**. The only server involved is a tiny price lookup
+(`api/quote.ts`). It receives a ticker, a date range or a search text, never
+your salary or any other input, and asks Yahoo Finance on your behalf.
 
 ## Features
 
@@ -18,9 +20,10 @@ personal data is stored or transmitted**.
   the 2-year break-even price.
 - **ESPP calculator** — with/without trustee, dual-currency capital-gain methods,
   loss handling (*Magen Mas*).
-- **Live & automatic** — USD/ILS exchange rate, stock prices, and the grant-date
-  30-day average price are fetched from free public sources, with **manual
-  overrides** for every value (so it works offline too).
+- **Live & automatic** — the USD/ILS exchange rate (frankfurter.app or
+  open.er-api.com, straight from the browser), stock prices, and the grant-date
+  30-day average price (Yahoo Finance via our `/api/quote` function), with
+  **manual overrides** for every value (so it works offline too).
 - **Symbol autocomplete** for US (NASDAQ/NYSE) and Tel-Aviv (`.TA`) listings.
 - **Current Israeli tax brackets, Bituah Leumi rates and ceilings**, selectable
   by year and centralized in one file.
@@ -48,6 +51,11 @@ bun run build    # production build → dist/
 
 For a user/organization page (served at the domain root), set `BASE_PATH=/` in
 the build step.
+
+GitHub Pages serves static files only, so the `/api/quote` price lookup isn't
+there. Live prices and live symbol search need a Vercel deployment (framework
+preset "Vite"; `api/quote.ts` deploys as a function with no configuration).
+Without it, enter prices by hand; autocomplete uses the bundled ticker list.
 
 ## How the tax math works
 
