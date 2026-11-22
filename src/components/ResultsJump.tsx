@@ -74,6 +74,10 @@ export function ResultsJump({ label, value }: { label: string; value: string }) 
   const editing = useEditing();
   const reduce = usePrefersReducedMotion();
 
+  // The href keeps the no-JS fallback; with JS we scroll and focus ourselves and
+  // leave the URL alone on purpose. Inputs are never persisted, so a #results
+  // kept in the URL would reopen (on reload or share) scrolled past the form
+  // onto an empty-results placeholder.
   const jump = (e: MouseEvent<HTMLAnchorElement>) => {
     const target = document.getElementById(RESULTS_ID);
     if (!target) return;
