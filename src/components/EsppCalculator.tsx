@@ -6,7 +6,7 @@ import {
   type EsppResult,
   type TaxProfile,
 } from "../lib/tax";
-import { fetchQuote, type Quote } from "../lib/market/quote";
+import { fetchQuote, isTaseSymbol, type Quote } from "../lib/market/quote";
 import { ils, money, num, pct, signTone, todayIso } from "../lib/format";
 import type { Settings } from "./GlobalInputs";
 import { SymbolInput } from "./SymbolInput";
@@ -14,7 +14,7 @@ import { EMPTY_FEES, FeeEditor, resolveFees, type FeeOverrides } from "./FeeEdit
 import { AnimatedValue, DateInput, EmptyResults, Field, NumberInput, ResultRow, Toggle } from "./ui";
 import { BreakdownBar, type Segment } from "./Breakdown";
 import { RESULTS_ID, ResultsJump } from "./ResultsJump";
-import { IDLE, liveQuote, quoteStatus, useLookup, type Lookup } from "./lookup";
+import { IDLE, liveQuote, lookupFor, NO_PRICE_YET, quoteStatus, useLookup, type Lookup } from "./lookup";
 
 /** How the purchase discount is entered: a percentage off, or the exact price paid. */
 export type DiscountMode = "percent" | "price";
@@ -92,8 +92,9 @@ export function EsppCalculator({
     noIncomeYear: settings.noIncomeYear,
   };
 
-  const live = liveQuote(plan.quote);
-  const isTase = live?.isTase ?? false;
+  const quote = lookupFor(plan.quote, plan.symbol.trim());
+  const live = liveQuote(quote);
+  const isTase = isTaseSymbol(plan.symbol.trim());
   const cur = isTase ? "ILS" : "USD";
   const effPrice = plan.setPrice ? Number(plan.priceOverride) : live?.price ?? 0;
   const showInUsd = settings.saleInDollars && !isTase;
@@ -208,7 +209,7 @@ export function EsppCalculator({
           onChange={(v) => update({ setPrice: v })}
         />
         <p className="muted" role="status">
-          {quoteStatus(plan.quote, plan.setPrice)}
+          {quoteStatus(quote, plan.setPrice)}
         </p>
         {plan.setPrice ? (
           <Field label={`Stock price (${cur})`}>
@@ -235,7 +236,7 @@ export function EsppCalculator({
             <EsppResults result={result} cur={cur} effPrice={effPrice} fx={fx} showInUsd={showInUsd} settings={settings} />
           </section>
         ) : (
-          <EmptyResults />
+          <EmptyResults>{quote.status === "failed" ? NO_PRICE_YET : undefined}</EmptyResults>
         )}
       </section>
     </div>
