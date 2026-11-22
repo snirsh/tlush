@@ -4,16 +4,17 @@ import { usePrefersReducedMotion } from "./ui";
 /** Id of each calculator's results column: the jump target. One tab renders at a time. */
 export const RESULTS_ID = "results";
 
-/** True while any part of the element with this id is on screen. */
+/**
+ * True while any part of the element with this id is on screen. Starts true,
+ * and stays true when visibility cannot be determined (no element, or no
+ * IntersectionObserver): the bar then stays hidden rather than risk covering
+ * the very breakdown it points at.
+ */
 function useInView(id: string): boolean {
-  // Start "in view" (bar hidden) so nothing flashes before the first callback.
   const [inView, setInView] = useState(true);
   useEffect(() => {
     const el = document.getElementById(id);
-    if (!el || typeof IntersectionObserver !== "function") {
-      setInView(false);
-      return;
-    }
+    if (!el || typeof IntersectionObserver !== "function") return;
     const io = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting));
     io.observe(el);
     return () => io.disconnect();
