@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 import { App } from "../App";
@@ -296,5 +296,133 @@ describe("ESPP calculator UI", () => {
     await waitFor(() =>
       expect(screen.getByText(/Tax on discount/i)).toBeInTheDocument(),
     );
+  });
+});
+
+describe("results jump (phone summary)", () => {
+  const jump = () => screen.queryByRole("link", { name: /see breakdown/i });
+
+  /**
+   * jsdom has no IntersectionObserver. Stub one whose callback the test drives;
+   * report(visible) says whether the results column is on screen.
+   */
+  function stubObserver() {
+    let callback: (entries: { isIntersecting: boolean }[]) => void = () => {};
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        constructor(cb: typeof callback) {
+          callback = cb;
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    return (visible: boolean) => act(() => callback([{ isIntersecting: visible }]));
+  }
+
+  /** Turn on the manual price and type one (synthetic figure). */
+  async function enterPrice(user: ReturnType<typeof userEvent.setup>, value: string) {
+    await user.click(screen.getByRole("checkbox", { name: /set stock price/i }));
+    const price = screen.getByLabelText("Stock price (USD)");
+    await user.clear(price);
+    await user.type(price, value);
+    return price;
+  }
+
+  /** The figure in the statement's own "Net to bank" row. */
+  function statementNetToBank(within: HTMLElement) {
+    const name = [...within.querySelectorAll(".result-row.emph .result-name")].find(
+      (el) => el.textContent === "Net to bank",
+    )!;
+    const value = name.closest(".result-head")!.querySelector(".result-value")!;
+    // Mid-roll, AnimatedValue keeps the destination figure in a hidden span.
+    return (value.querySelector(".visually-hidden") ?? value).textContent;
+  }
+
+  it("is absent until there is a result, then shows the statement's net to bank", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    expect(jump()).toBeNull();
+
+    await enterPrice(user, "200");
+    const link = await waitFor(() => jump()!);
+    const results = screen.getByRole("region", { name: "Results" });
+    const figure = statementNetToBank(results);
+    expect(figure).toMatch(/^₪[\d,]+\.\d{2}$/);
+    expect(link).toHaveAccessibleName(`Net to bank ${figure} See breakdown`);
+    expect(link).toHaveAttribute("href", `#${results.id}`);
+    // Plain text, never a live region: typing must not announce every keystroke.
+    expect(link.closest("[aria-live]")).toBeNull();
+  });
+
+  it("moves focus to the results when activated", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await enterPrice(user, "200");
+    await user.click(await waitFor(() => jump()!));
+    expect(screen.getByRole("region", { name: "Results" })).toHaveFocus();
+  });
+
+  it("steps aside while a text field is being edited", async () => {
+    const report = stubObserver();
+    const user = userEvent.setup();
+    render(<App />);
+    const price = await enterPrice(user, "200");
+    expect(price).toHaveFocus();
+    expect(await waitFor(() => jump()!)).toHaveAttribute("data-hidden");
+    report(false); // results scrolled away: only the editing keeps it down
+    expect(jump()).toHaveAttribute("data-hidden");
+
+    // Leaving the field brings it back. (That a tapped checkbox does not hide
+    // it needs real :focus-visible; e2e covers it.)
+    await user.click(screen.getByRole("heading", { name: "Tlush" }));
+    expect(jump()).not.toHaveAttribute("data-hidden");
+  });
+
+  it("hides while the results are on screen", async () => {
+    const report = stubObserver();
+    const user = userEvent.setup();
+    render(<App />);
+    await enterPrice(user, "200");
+    await user.click(screen.getByRole("heading", { name: "Tlush" }));
+    const link = await waitFor(() => jump()!);
+
+    report(false);
+    expect(link).not.toHaveAttribute("data-hidden");
+    report(true);
+    expect(link).toHaveAttribute("data-hidden");
+  });
+
+  it("stays hidden when it cannot tell whether the results are on screen", async () => {
+    // No IntersectionObserver (jsdom, very old engines): never risk covering them.
+    const user = userEvent.setup();
+    render(<App />);
+    await enterPrice(user, "200");
+    await user.click(screen.getByRole("heading", { name: "Tlush" }));
+    expect(await waitFor(() => jump()!)).toHaveAttribute("data-hidden");
+  });
+
+  it("sums every grant when there are several", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await enterPrice(user, "200");
+    await user.click(screen.getByRole("button", { name: /add another grant/i }));
+    const combined = screen.getByRole("heading", { name: "Combined total" }).closest("section")!;
+    expect(jump()).toHaveAccessibleName(
+      `Net to bank, all grants ${statementNetToBank(combined)} See breakdown`,
+    );
+  });
+
+  it("appears with ESPP results and never on the Explanation tab", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole("tab", { name: "ESPP" }));
+    expect(jump()).toBeNull();
+    await enterPrice(user, "80");
+    await waitFor(() => expect(jump()).not.toBeNull());
+
+    await user.click(screen.getByRole("tab", { name: "Explanation" }));
+    expect(jump()).toBeNull();
   });
 });
