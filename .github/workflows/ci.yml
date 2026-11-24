@@ -8,6 +8,9 @@ on:
   # this workflow. Run it by hand on bot/rate-update.
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build-test:
     runs-on: ubuntu-latest
