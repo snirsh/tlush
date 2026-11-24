@@ -3,7 +3,7 @@
   "configVersion": 0,
   "workspaces": {
     "": {
-      "name": "rsu-espp-tax-calculator-il",
+      "name": "tlush",
       "dependencies": {
         "react": "^18.3.1",
         "react-dom": "^18.3.1",
