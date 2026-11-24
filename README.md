@@ -42,21 +42,11 @@ bun run test     # run the tax-engine test suite
 bun run build    # production build → dist/
 ```
 
-## Deploying to GitHub Pages
+## Deployment
 
-1. Push to `master`.
-2. In the repo settings, set **Pages → Build and deployment → Source** to
-   **GitHub Actions**.
-3. The included workflow (`.github/workflows/deploy.yml`) builds and publishes
-   automatically. The app is served at `https://<owner>.github.io/<repo>/`.
-
-For a user/organization page (served at the domain root), set `BASE_PATH=/` in
-the build step.
-
-GitHub Pages serves static files only, so the `/api/quote` price lookup isn't
-there. Live prices and live symbol search need a Vercel deployment (framework
-preset "Vite"; `api/quote.ts` deploys as a function with no configuration).
-Without it, enter prices by hand; autocomplete uses the bundled ticker list.
+Production runs on Vercel at https://tlush.snirsh.codes. Vercel builds the app
+with its "Vite" framework preset and deploys `api/quote.ts` as a function at
+`/api/quote`, with no extra configuration.
 
 ## How the tax math works
 
