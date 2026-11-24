@@ -9,7 +9,7 @@ file accurate when you change structure or conventions.
 A client-side **Israeli RSU & ESPP after-tax calculator**. It estimates
 net proceeds when selling RSUs or ESPP shares under **Section 102** of the
 Israeli Income Tax Ordinance (capital track). It ships as a Vite + React + TS
-single-page app and deploys to **GitHub Pages**.
+single-page app and deploys to **Vercel** at https://tlush.snirsh.codes.
 
 Key product rules:
 
@@ -115,14 +115,9 @@ sandboxes — the jsdom layer covers UI verification when they are.
 
 ## Deployment
 
-`.github/workflows/deploy.yml` builds on push to `master` and publishes `dist/` to
-GitHub Pages. The base path is set to `/<repo>/` via `BASE_PATH`. Enable Pages
-with "GitHub Actions" as the source in repo settings.
-
-Vercel (framework preset "Vite") builds the same app at the domain root and
-deploys `api/quote.ts` as a zero-config function at `/api/quote`. GitHub Pages
-has no functions, so on Pages the live quote, history and search lookups fail
-soft: the manual price fields and the bundled `tickers.json` take over.
+Vercel (framework preset "Vite") builds the app at the domain root of
+https://tlush.snirsh.codes and deploys `api/quote.ts` as a zero-config function
+at `/api/quote`. There is no other production target.
 
 ## Accuracy note
 
