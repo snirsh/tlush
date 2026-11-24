@@ -3,11 +3,6 @@ import react from "@vitejs/plugin-react";
 import { handle } from "./api/quote";
 import { fixtureYahoo } from "./e2e/fixtures/yahoo";
 
-// When deployed to GitHub Pages at https://<user>.github.io/<repo>/ the app is
-// served from a sub-path. Set BASE_PATH in CI to that sub-path (e.g. "/repo/").
-// Locally and for user/org pages it defaults to "/".
-const base = process.env.BASE_PATH ?? "/";
-
 /** The self-hosted font files the first viewport renders with. */
 const ABOVE_THE_FOLD_FONTS = ["manrope-latin-var", "ibm-plex-mono-latin-500"];
 
@@ -72,7 +67,6 @@ function apiQuote(): Plugin {
 }
 
 export default defineConfig({
-  base,
   plugins: [react(), preloadFonts(), apiQuote()],
   build: {
     outDir: "dist",
