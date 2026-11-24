@@ -12,3 +12,9 @@ playwright-report/
 
 # TypeScript incremental build info
 *.tsbuildinfo
+
+# Secrets and local deployment state
+.env*
+!.env.example
+.vercel/
+*.pem
