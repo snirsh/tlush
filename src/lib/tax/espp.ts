@@ -127,7 +127,7 @@ export function computeEspp(
     input.whatIf2Years,
   );
 
-  let capitalTax = 0;
+  let capitalTax: number;
   let netMarginal = marginalTax;
   let netBituah = bituah;
   let taxOnDiscountPaid = 0;

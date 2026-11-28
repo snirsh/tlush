@@ -251,4 +251,11 @@ describe("ESPP without trustee (discount tax withheld at purchase)", () => {
     expect(result.netToSalary).toBe(0);
     expect(result.netToBank).toBeCloseTo(result.totalNet, 4);
   });
+
+  it("capital tax = ₪7,000 × 25% = ₪1,750 (purchase fx defaults to the sale fx, 3.5)", () => {
+    // Shekel gain = 35,000 − (80 × 100 × 3.5) = 7,000.
+    // Dollar gain = (100 − 80) × 100 × 3.5 = 7,000. Lower = 7,000.
+    expect(result.capitalMethods.basis).toBeCloseTo(7_000, 2);
+    expect(result.capitalTax).toBeCloseTo(1_750, 2);
+  });
 });
